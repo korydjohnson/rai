@@ -12,6 +12,8 @@ Description: Adapts stepwise regression to adaptively search for polynomials.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
+URL: https://github.com/korydjohnson/rai
+BugReports: https://github.com/korydjohnson/rai/issues
 Imports:
     stats
 Suggests: 
