@@ -68,6 +68,7 @@ selectExpert = function(experts, verbose) {
 # could replace this with a call to VIF, need all 3 output pieces though
 computePval = function(y, X, x, sigma, df) {  # takes a-priori known df
   if(ncol(X)>0) regAdd = lm(y ~ X + x) else regAdd = lm(y ~ x)
+  if(is.na(regAdd$coefficients["x"])) return(list(pval=NA))
   regSum = summary(regAdd)
   if (sigma == "sand") {	# Sandwhich estimation
     df = regAdd$df.residual  # overwrites df *locally*
@@ -144,44 +145,39 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType,
 
     # compute p-value, conduct test, implications of test ------------------
     pvalOut = computePval(y, X, x, sigma, df)  # takes a-priori known df
-    if(is.null(pvalOut$pval)) { cat("Error: null p-value.\n"); break }
-
-    # can't get bid before pvalue if rmse unknown
-    bid     = iExpert$bid(pvalOut$rmse, n-p-1)
-    pcrit   = iExpert$pcrit(bid)
-    if(verbose) {
-      cat("     ", iExpert$name, "epoch", iExpert$state()$epoch,
-                    " tests ", unlist(xIndex), "pcrit", pcrit)
-    }
-    if(is.na(pvalOut$pval)) {  # should really do a check for VIF > 10/20 etc
+    if (is.na(pvalOut$pval)) {  # should really do a check for VIF > 10 or 20 etc
       if (verbose) {
         cat("\nVariable ", featureName(xIndex, theData),
             " is collinear; reject without penalty.\n")
       }
       iExpert$passTest(0)  # added to global, don't test covariate again
-    } else if(pvalOut$pval > pcrit) {  # fail to reject
-      if(verbose) cat( " < pval", pvalOut$pval, "\n")
-      payment = bid/(1-bid)
-      iExpert$failTest(payment, pvalOut$rmse, pvalOut$rS - rS, pvalOut$pval)
-    } else {  # reject
-      if (verbose) {
-        cat( " > pval", pvalOut$pval, " +++ Add ", featureName(xIndex, theData),"\n")
-      }
-      iExpert$passTest(omega)  # added to global, don't test covariate again
-      rS = pvalOut$rS
-      sapply(experts, function(e) e$newModel()) # reset all model counters
-      X = cbind(X,x)  # add covariate and index to features
-      p = p+1
-      theModelFeatures[[p]] = unlist(xIndex)
-      # if poly=T, new expert for interactions
-      if (poly) {
-        newExp = makeScavengerExpert(gWealth, theModelFeatures,
-                                     featureName(xIndex, theData), alg, sigma)
-        switch(searchType,
-               "breadth" = { experts = list(list(newExp), experts) },
-               "depth"   = { experts = list(experts, list(newExp)) }
-        )
-        experts = unlist(experts, recursive=F)
+    } else {  # can't get bid before pvalue if rmse unknown
+      bid     = iExpert$bid(pvalOut$rmse, n-p-1)
+      pcrit   = iExpert$pcrit(bid)
+      if(pvalOut$pval > pcrit) {  # fail to reject
+        if(verbose) cat( " < pval", pvalOut$pval, "\n")
+        payment = bid/(1-bid)
+        iExpert$failTest(payment, pvalOut$rmse, pvalOut$rS - rS, pvalOut$pval)
+      } else {  # reject
+        if (verbose) {
+          cat( " > pval", pvalOut$pval, " +++ Add ", featureName(xIndex, theData),"\n")
+        }
+        iExpert$passTest(omega)  # added to global, don't test covariate again
+        rS = pvalOut$rS
+        sapply(experts, function(e) e$newModel()) # reset all model counters
+        X = cbind(X,x)  # add covariate and index to features
+        p = p+1
+        theModelFeatures[[p]] = unlist(xIndex)
+        # if poly=T, new expert for interactions
+        if (poly) {
+          newExp = makeScavengerExpert(gWealth, theModelFeatures,
+                                       featureName(xIndex, theData), alg, sigma)
+          switch(searchType,
+                 "breadth" = { experts = list(list(newExp), experts) },
+                 "depth"   = { experts = list(experts, list(newExp)) }
+          )
+          experts = unlist(experts, recursive=F)
+        }
       }
     }
 

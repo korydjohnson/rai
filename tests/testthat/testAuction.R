@@ -71,3 +71,9 @@ test_that("skipEpochs skips correct sets for raiPlus", {
   expect_equal(sapply(experts, function(e) e$state()$position), c(2, 1, 0))
   expect_equal(sapply(experts, function(e) e$state()$epoch), c(7, 7, 7))
 })
+
+test_that("computePval doesn't break due to mulicollinearity", {
+  X = x = as.matrix(rnorm(10))
+  y = as.matrix(X + rnorm(10))
+  expect_true(is.na(computePval(y, X, x, 1, 1)))
+})

@@ -8,7 +8,7 @@
 rai(theData, theResponse, alpha = 0.05, alg = "rai", r = 0.8,
   poly = (alg != "RH"), searchType = "breadth", sigma = "sand",
   df = NA, omega = alpha, reuse = (alg == "RH"), nMaxTest = Inf,
-  verbose = F, save = F)
+  verbose = F, save = T)
 }
 \arguments{
 \item{theData}{matrix of covariates.}
