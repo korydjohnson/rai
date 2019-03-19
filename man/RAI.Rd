@@ -6,9 +6,9 @@
 \title{Main function for RAI regression.}
 \usage{
 rai(theData, theResponse, alpha = 0.05, alg = "rai", r = 0.8,
-  poly = (alg != "RH"), searchType = "breadth", sigma = "sand",
-  df = NA, omega = alpha, reuse = (alg == "RH"), nMaxTest = Inf,
-  verbose = F, save = T)
+  poly = (alg != "RH"), searchType = "breadth", m = 500,
+  sigma = "step", rmse = NA, df = NA, omega = alpha, reuse = (alg
+  == "RH"), maxTest = Inf, verbose = F, save = T)
 }
 \arguments{
 \item{theData}{matrix of covariates.}
@@ -29,13 +29,16 @@ epoch.}
 higher-order polynomials. One of "breadth" (more base features) or "depth"
 (higher orders).}
 
-\item{sigma}{A character string or numeric value. String "ind" uses the rmse
-from the full regression model. String "sand" uses sandwich estimation for
-each test.}
+\item{m}{number of observations used in subsampling for variance inflation
+factor estimate of r.squared.}
 
-\item{df}{if a numeric sigma value is given, must also provide the degrees of
-freedom for the estimate. In this case, it is only used initially by the
-gWealth object to determine bids and rejection thresholds.}
+\item{sigma}{type of error estimate used; one of "ind" or "step". If "ind",
+you must provide a numeric value for rmse and df.}
+
+\item{rmse}{user provided value for rmse. Must be used with sigma="ind".}
+
+\item{df}{degrees of freedom for user specified rmse. Must be used with
+sigma="ind".}
 
 \item{omega}{return from rejecting a test in Alpha-Investing (<= alpha).}
 
@@ -43,7 +46,7 @@ gWealth object to determine bids and rejection thresholds.}
 considered a test of the same hypothsis? reusing wealth isn't implemented
 for RAI or RAIplus as the effect is negligible.}
 
-\item{nMaxTest}{maximum number of tests.}
+\item{maxTest}{maximum number of tests.}
 
 \item{verbose}{logical. Should auction output be prited?}
 
@@ -55,7 +58,7 @@ A list which includes the following components: \item{formula}{final
   model formula.} \item{y}{response.} \item{X}{model matrix from final
   model.} \item{experts}{list of experts.} \item{theModelFeatures}{list of
   feature names in the final model.} \item{options}{options given to RAI:
-  algorithm, searchType, poly}
+  algorithm, searchType, r, poly}
 }
 \description{
 RAI is a wrapper function to create the required objects and
@@ -63,8 +66,11 @@ RAI is a wrapper function to create the required objects and
   efficient and statistically valid way to run stepwise regression.
 }
 \examples{
-# rai(theData, theResponse)
-# rai(theData, theResponse, alg="raiPlus")
-# rai(theData, theResponse, alg="raiPlus", poly=F, verbose=T)  # valid stepwise
-
+  data("CO2")
+  theResponse = CO2$uptake
+  theData = CO2[ ,-5]
+  rai_out = rai(theData, theResponse)
+  summarise_rai(rai_out)
+  raiPlus_out = rai(theData, theResponse, alg="raiPlus")
+  summarise_rai(raiPlus_out)$cost_raiPlus
 }

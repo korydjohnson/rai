@@ -7,24 +7,17 @@
 \alias{makeScavengerExpert}
 \title{Making Expert Objects}
 \usage{
-makeExpert(bidder, constructor, alg, sigma)
+makeExpert(bidder, constructor)
 
-makeStepwiseExpert(gWealth, ncolumns, alg, sigma)
+makeStepwiseExpert(gWealth, ncolumns)
 
-makeScavengerExpert(gWealth, theModelFeatures, name, alg, sigma)
+makeScavengerExpert(gWealth, theModelFeatures, name)
 }
 \arguments{
 \item{bidder}{bidder object; output of makeStepwiseBidder.}
 
 \item{constructor}{constructor object; output of makeRawSource or
 makeLocalScavenger.}
-
-\item{alg}{algorithm can be one of "rai", "raiPlus", or "RH" (Revisiting
-Holm).}
-
-\item{sigma}{A character string or numeric value. String "ind" uses the rmse
-from the full regression model. String "sand" uses sandwich estimation for
-each test.}
 
 \item{gWealth}{global wealth object, output of gWealthStep.}
 

@@ -18,17 +18,18 @@
 #' @param searchType A character string specifying the prioritization of
 #'   higher-order polynomials. One of "breadth" (more base features) or "depth"
 #'   (higher orders).
-#' @param sigma A character string or numeric value. String "ind" uses the rmse
-#'   from the full regression model. String "sand" uses sandwich estimation for
-#'   each test.
-#' @param df if a numeric sigma value is given, must also provide the degrees of
-#'   freedom for the estimate. In this case, it is only used initially by the
-#'   gWealth object to determine bids and rejection thresholds.
+#' @param m number of observations used in subsampling for variance inflation
+#'   factor estimate of r.squared.
+#' @param sigma type of error estimate used; one of "ind" or "step". If "ind",
+#'   you must provide a numeric value for rmse and df.
+#' @param rmse user provided value for rmse. Must be used with sigma="ind".
+#' @param df degrees of freedom for user specified rmse. Must be used with
+#'   sigma="ind".
 #' @param omega return from rejecting a test in Alpha-Investing (<= alpha).
 #' @param reuse logical. Should repeated tests of the same covariate be
 #'   considered a test of the same hypothsis? reusing wealth isn't implemented
 #'   for RAI or RAIplus as the effect is negligible.
-#' @param nMaxTest maximum number of tests.
+#' @param maxTest maximum number of tests.
 #' @param verbose logical. Should auction output be prited?
 #' @param save logical. Should the auction results be saved? If TRUE, returns a
 #'   summary matrix.
@@ -36,41 +37,40 @@
 #'   model formula.} \item{y}{response.} \item{X}{model matrix from final
 #'   model.} \item{experts}{list of experts.} \item{theModelFeatures}{list of
 #'   feature names in the final model.} \item{options}{options given to RAI:
-#'   algorithm, searchType, poly}
+#'   algorithm, searchType, r, poly}
 #' @examples
-#' # rai(theData, theResponse)
-#' # rai(theData, theResponse, alg="raiPlus")
-#' # rai(theData, theResponse, alg="raiPlus", poly=F, verbose=T)  # valid stepwise
-#'
+#'   data("CO2")
+#'   theResponse = CO2$uptake
+#'   theData = CO2[ ,-5]
+#'   rai_out = rai(theData, theResponse)
+#'   summarise_rai(rai_out)
+#'   raiPlus_out = rai(theData, theResponse, alg="raiPlus")
+#'   summarise_rai(raiPlus_out)$cost_raiPlus
 #' @export
-#' @importFrom stats lm model.matrix pt resid var
+#' @importFrom stats lm model.matrix pt qt resid var sd .lm.fit
 
 rai = function(theData, theResponse, alpha=.05, alg="rai", r=.8, poly=(alg!="RH"),
-               searchType="breadth", sigma="sand", df=NA, omega=alpha,
-               reuse=(alg=="RH"), nMaxTest=Inf, verbose=F, save=T) {
+               searchType="breadth", m=500, sigma="step", rmse = NA, df=NA,
+               omega=alpha, reuse=(alg=="RH"), maxTest=Inf, verbose=F, save=T) {
   stopifnot(searchType %in% c("breadth", "depth") ||
-              (sigma %in% c("sand", "ind") | is.numeric(sigma)) ||
+              sigma %in% c("ind", "step") ||
               alg %in% c("rai", "raiPlus", "RH"))
-  if (poly && alg == "RH") stop("Cannot do polynomial regression with RH.")
-  if (reuse && alg != "RH") stop("RAI does not reuse wealth.")
-  if (sigma == "sand" && !requireNamespace("sandwich", quietly = TRUE)) {
-    stop("Package \"sandwich\" needed for 'sand' SE option.", call. = FALSE)
-  }
-  if (sigma == "ind" && ncol(theData)>=nrow(theData)) {
-    stop("Independent SE fits the full linear model: need n > p.")
-  }
-
   theData = model.matrix(~. - 1, data=as.data.frame(theData))
   theResponse = as.matrix(theResponse, ncol=1)
   if (sigma == "ind") {
-    lmFull = lm(theResponse ~ theData, model=F, x=F, qr=F)
-    df = lmFull$df.resid
-    sigma = sqrt(crossprod(resid(lmFull))/df)
+    stopifnot(is.numeric(rmse) && is.numeric(df))
+  } else {
+    rmse = sd(theResponse)
+    df = nrow(theResponse) - 1
   }
-  gWealth = gWealthStep(p=ncol(theData), n=nrow(theData), varY=var(theResponse),
-                        alg, sigma, df, r, reuse, alpha)
-  experts = list(makeStepwiseExpert(gWealth, ncol(theData), alg, sigma))
+  if (poly && alg == "RH") { stop("Cannot do polynomial regression with RH.") }
+  if (reuse && alg != "RH") { stop("RAI does not reuse wealth.") }
 
-  runAuction(experts, gWealth, theData, theResponse, alg, poly, searchType,
-             sigma, df, omega, reuse, nMaxTest, verbose, save)
+  gWealth = gWealthStep(alpha, alg, r, var(theResponse)*(nrow(theResponse)-1),
+                        ncol(theData), reuse, rmse, df)
+  experts = list(makeStepwiseExpert(gWealth, ncol(theData)))
+  aucOut = runAuction(experts, gWealth, theData, theResponse, alg, poly,
+                      searchType, m, sigma, omega, reuse, maxTest, verbose, save)
+  aucOut$options$r = r
+  aucOut
 }

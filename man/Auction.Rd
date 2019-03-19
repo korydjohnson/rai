@@ -3,21 +3,18 @@
 \name{Auction}
 \alias{Auction}
 \alias{featureName}
-\alias{selectExpert}
-\alias{computePval}
+\alias{vif}
 \alias{skipEpochs}
 \alias{runAuction}
 \title{Internal function to manage multiple experts.}
 \usage{
 featureName(indices, theData)
 
-selectExpert(experts, verbose)
+vif(res, y, X, x, n, p, m, TSS)
 
-computePval(y, X, x, sigma, df)
+skipEpochs(experts, verbose, alg, epochCap)
 
-skipEpochs(experts, verbose, y, n, p, alg)
-
-runAuction(experts, gWealth, theData, y, alg, poly, searchType, sigma, df,
+runAuction(experts, gWealth, theData, y, alg, poly, searchType, m, sigma,
   omega, reuse, nMaxTest, verbose, save)
 }
 \arguments{
@@ -25,10 +22,7 @@ runAuction(experts, gWealth, theData, y, alg, poly, searchType, sigma, df,
 
 \item{theData}{covariate matrix.}
 
-\item{experts}{list of expert objects. Each expert is the output of
-makeStepwiseExpert or makeScavengerExpert.}
-
-\item{verbose}{logical. Should auction output be prited?}
+\item{res}{residuals from current model}
 
 \item{y}{the response as a single column matrix.}
 
@@ -36,19 +30,24 @@ makeStepwiseExpert or makeScavengerExpert.}
 
 \item{x}{covariate being tested for addition into the model.}
 
-\item{sigma}{A character string or numeric value. String "ind" uses the rmse
-from the full regression model. String "sand" uses sandwich estimation for
-each test.}
-
-\item{df}{if a numeric sigma value is given, must also provide the degrees of
-freedom for the estimate. df is only overwritten locally if sigma=="sand".}
-
 \item{n}{number of observations.}
 
 \item{p}{number of predictors in the \emph{current} model.}
 
+\item{m}{number of observations used in subsampling for variance inflation
+factor estimate of r.squared.}
+
+\item{TSS}{total sum of squares; considering current residuals to be the response.}
+
+\item{experts}{list of expert objects. Each expert is the output of
+makeStepwiseExpert or makeScavengerExpert.}
+
+\item{verbose}{logical. Should auction output be prited?}
+
 \item{alg}{algorithm can be one of "rai", "raiPlus", or "RH" (Revisiting
 Holm).}
+
+\item{epochCap}{when skipping epochs, cannot skip passed this point.}
 
 \item{gWealth}{global wealth object, output of gWealthStep.}
 
@@ -57,6 +56,8 @@ Holm).}
 \item{searchType}{A character string specifying the prioritization of
 higher-order polynomials. One of "breadth" (more base features) or "depth"
 (higher order).}
+
+\item{sigma}{type of error estimate used in gWealthStep; one of "ind" or "step".}
 
 \item{omega}{return from rejecting a test in Alpha-Investing.}
 

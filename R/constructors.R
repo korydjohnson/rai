@@ -17,43 +17,38 @@
 #' @param name name of the base feature with which to create interactions.
 #' @return A closure containing a list of functions.
 
+#' @export
 makeRawSource = function(ncolumns) {
   activeColumns = 0:ncolumns
   position      = ncolumns  # position in list, work back to front
   prevPosition  = NA
   nactive       = ncolumns
-  rmseVec       = rep(NA, ncolumns)  # residual se in current model including this covariate
 
   list(
     name = "Marginal",
-    env  = environment(),
     state = function() { list(
       position     = position,
       prevPosition = prevPosition,
-      active       = activeColumns,
-      rmseVec      = rmseVec,
-      nactive      = sum(!is.na(activeColumns[-1]))
+      active       = activeColumns[-1],  # only shows columns -> correct indexes
+      nactive      = nactive
     )},
+    finishedPass = function() { position == 0 },
+    finished = function() { nactive == 0 },
     feature = function() {
-      prevPosition  <<- position
-      position      <<- max(activeColumns[activeColumns<position],na.rm=T)
+      prevPosition <<- position
+      position     <<- max(activeColumns[activeColumns<position],na.rm=T)
       return(prevPosition)
     },
     # +1 corrects for 0 based index. Position is which column, not location in vector
     dropLastFeature = function() {
       activeColumns[prevPosition + 1] <<- NA
+      nactive <<- nactive-1
     },
-    udRmse = function(rmse) {
-      rmseVec[prevPosition + 1] <<- rmse
-    },
-    resetSigma = function() {  # when reject covariate, previous sigmas incorrect
-      rmseVec[!is.na(rmseVec)] = 0
-    },
-    udPass = function() {  # move to beginning of list of features
+    ud_pass = function() {  # move to beginning of list of features
       position <<- max(activeColumns, na.rm=T)
       prevPosition <<- NA
     },
-    udPosition = function(nextPosition) {  # used when skipping ahead
+    ud_position = function(nextPosition) {  # used when skipping ahead
       position     <<- nextPosition
       prevPosition <<- NA
     }
@@ -61,11 +56,12 @@ makeRawSource = function(ncolumns) {
 }
 
 #' @name Feature-Constructors
+#' @export
 makeLocalScavenger = function(theModelFeatures, name) {
   baseFeature = theModelFeatures[[length(theModelFeatures)]]
   raw = makeRawSource(length(theModelFeatures))
   raw$name = paste("Poly", name)
-  e = raw$env
+  e = environment(raw$state)
   raw$feature = function() {  # don't need deep assignment as given environment
     e$prevPosition = e$position
     e$position     = max(e$activeColumns[e$activeColumns<e$position], na.rm=T)

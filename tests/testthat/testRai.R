@@ -2,30 +2,32 @@ context("rai Wrapper")
 library(rai)
 
 # set up ------------------------------------------------------------------
-load("theData.rda")
-
-# helper function ---------------------------------------------------------
-checkAuc = function(alg, poly, sigma) {
-  if (poly) {
-    load("theResponsePoly.rda")
-  } else {
-    load("theResponse.rda")
-  }
-  file = paste0(alg, "_", if (poly) "poly_", sigma, ".rda")
-  load(file)
-  auc = rai(theData, theResponse, alg=alg, poly=poly, sigma=sigma, save=T)
-  expect_identical(auc$summary, summary)
-}
 
 # tests -------------------------------------------------------------------
-
-test_that("rai wrapper gives identical output as previous version", {
-  checkAuc("rai", F, "ind")
-  checkAuc("rai", F, "sand")
-  checkAuc("rai", T, "sand")
-  checkAuc("raiPlus", F, "ind")
-  checkAuc("raiPlus", F, "sand")
-  checkAuc("raiPlus", T, "sand")
-  checkAuc("RH", F, "ind")
-  checkAuc("RH", F, "sand")
+test_that("no errors", {
+  # happens on step 12 of the following data example (colinearity)
+  data("mtcars")
+  theResponse = mtcars$mpg
+  theData = mtcars[ ,-1]
+  auc1 = rai(theData, theResponse)
+  auc2 = rai(theData, theResponse, alg="raiPlus")
 })
+
+test_that("categorical data converted; pass & epoch", {
+  # test 51: epoch is over, but others not, only ud pass
+  # test 106: move expert to current test (cost 0)
+  data("CO2")
+  theResponse = CO2$uptake
+  theData = CO2[ ,-5]
+  auc_rai <<- rai(theData, theResponse, save=T)
+  auc_raiPlus <<- rai(theData, theResponse, alg="raiPlus", save=T)
+})
+
+test_that("rai/raiPlus test differently", {
+  raiSum = summarise_rai(auc_rai)
+  raiPlusSum = summarise_rai(auc_raiPlus)
+  expect_equal(raiSum$stats$cost_raiPlus,
+               list(extraTests = 0, prop_rai = 0))
+  expect_equal(raiPlusSum$stats$cost_raiPlus$extraTests, 39)
+})
+

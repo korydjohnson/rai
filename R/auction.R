@@ -23,11 +23,9 @@
 #' @param searchType A character string specifying the prioritization of
 #'   higher-order polynomials. One of "breadth" (more base features) or "depth"
 #'   (higher order).
-#' @param sigma A character string or numeric value. String "ind" uses the rmse
-#'   from the full regression model. String "sand" uses sandwich estimation for
-#'   each test.
-#' @param df if a numeric sigma value is given, must also provide the degrees of
-#'   freedom for the estimate. df is only overwritten locally if sigma=="sand".
+#' @param sigma type of error estimate used in gWealthStep; one of "ind" or "step".
+#' @param m number of observations used in subsampling for variance inflation
+#'   factor estimate of r.squared.
 #' @param omega return from rejecting a test in Alpha-Investing.
 #' @param reuse logical. Should repeated tests of the same covariate be
 #'   considered a test of the same hypothsis? Reusing wealth isn't implemented
@@ -37,8 +35,11 @@
 #' @param save logical. Should the auction results be saved? If TRUE, returns a
 #'   summary matrix.
 #' @param indices list of columns of theData used in an interaction.
+#' @param res residuals from current model
 #' @param X covariates in the current model.
 #' @param x covariate being tested for addition into the model.
+#' @param TSS total sum of squares; considering current residuals to be the response.
+#' @param epochCap when skipping epochs, cannot skip passed this point.
 #' @return A list which includes the following components: \item{formula}{final
 #'   model formula.} \item{y}{response.} \item{X}{model matrix from final
 #'   model.} \item{experts}{list of experts.} \item{theModelFeatures}{list of
@@ -46,200 +47,199 @@
 #'   algorithm, searchType, poly}
 
 featureName = function(indices, theData) {
-  paste(sort(colnames(theData)[unlist(indices)]), collapse="_")
+  paste(sort(colnames(theData)[indices]), collapse="_")
 }
 
 #' @name Auction
-selectExpert = function(experts, verbose) {
-  active  = sapply(experts, function(e) e$finished()) == F
-  if (verbose & sum(!active) > 0) {
-    cat("Expert ", experts[[which(!active)]]$name, " finished. \n")
+vif = function(res, y, X, x, n, p, m, TSS) {
+  # reg = .lm.fit(cbind(X, x), res)  # avoiding
+  beta_yAdj = c(crossprod(x, res)/crossprod(x-mean(x)))
+  if (m + p < n) {  # subsample for new x
+    sam = sample.int(n, m+p)
+    x = x[sam, 1, drop=F]
+    X = X[sam,  , drop=F]
+    res = res[sam, 1, drop=F]
+    y = y[sam, 1, drop=F]
+    TSS = c(crossprod(y-mean(y)))
   }
-  if (sum(active)==0) { list(expertIndex=NULL) }
-  epochs = sapply(experts[active],
-                  function(e) ifelse(!e$finishedPass(), e$state()$epoch, Inf))
-  # max: select from end of experts list; depth/breath builds list differently
-  # bid depends on rmse; stepwise prioritizes epoch
-  list(expertIndex = max(which(epochs==min(epochs))),  # location among active
-       active = active)
-}
-
-#' @name Auction
-# could replace this with a call to VIF, need all 3 output pieces though
-computePval = function(y, X, x, sigma, df) {  # takes a-priori known df
-  if(ncol(X)>0) regAdd = lm(y ~ X + x) else regAdd = lm(y ~ x)
-  if(is.na(regAdd$coefficients["x"])) return(list(pval=NA))
-  regSum = summary(regAdd)
-  if (sigma == "sand") {	# Sandwhich estimation
-    df = regAdd$df.residual  # overwrites df *locally*
-    sigX = sqrt(sandwich::vcovHC(regAdd)["x", "x"])
-  } else {  # compute sigX with known resid se; unscaled is diag of (X'X)^{-1}
-    sigX = sigma*sqrt(regSum$cov.unscaled["x", "x"])
+  xRes  = .lm.fit(X, x)$residuals
+  rho   = c(crossprod(x-mean(x))/crossprod(xRes))
+  if (length(unique(x))==1 || rho > 10^2) {  # rS unstable for huge rho
+    list(rho = 10^2, rS = c(1 - crossprod(res) / TSS))
+  } else {
+    list(rho = rho, rS = c(1 - crossprod(res-xRes*c(beta_yAdj*rho)) / TSS))
   }
-  pval = 2*pt(-abs(regAdd$coefficients["x"]/sigX), df)
-
-  list(pval = as.vector(pval),
-       rmse = sigX/sqrt(regSum$cov.unscaled["x", "x"]),
-       rS   = regSum$r.squared)
 }
 
 #' @name Auction
-skipEpochs = function(experts, verbose, y, n, p, alg) {
-  epochs = sapply(experts, function(e) e$state()$nextEpochInfo$epoch)
-  nextEpoch = min(epochs)
+skipEpochs = function(experts, verbose, alg, epochCap) {
+  goalEpochs = sapply(experts, function(e) e$state()$nextEpochInfo$epoch)
+  nIndex = max(which(goalEpochs == min(goalEpochs)))  # max: start at end
+  nEpoch = min(goalEpochs, epochCap)
   if (verbose) {
-    cat("*** Moving experts", sapply(experts, function(e) e$name),
-        "to epoch", nextEpoch, "***\n")
+    cat("**Moving Experts**\n")
+    epochs = sapply(experts, function(e) e$state()$epoch)
+    position = sapply(experts, function(e) e$state()$position)
+    goalPos = sapply(experts, function(e) e$state()$nextEpochInfo$position)
+    names = sapply(experts, function(e) e$name)
+    df = rbind(position, epochs, goalPos, goalEpochs, nEpoch)
+    colnames(df) = names
+    print(df)
   }
-  nextExpertIndex = max(which(epochs == nextEpoch))  # max: start at end
-  normY = crossprod(y-mean(y))
-  # set all to same epoch, but later experts to start of pass, earlier to end
-  # if would have been tested and aiPlus, set epoch + 1
-  if (nextExpertIndex > 1) {
-    nextEpochInfo = list("position"=Inf, "epoch"=nextEpoch)
-    sapply(experts[1:(nextExpertIndex-1)],
-           function(e) e$setNextTest(normY, n, p, nextEpochInfo))
+  if (nIndex > 1) {  # later experts set to beginning
+    nInfo = list("position"=Inf, "epoch"=nEpoch)
+    sapply(experts[1:(nIndex-1)], function(e) e$setNextTest(nInfo))
   }
-  if (nextExpertIndex < length(experts)) {
-    nextEpochInfo = list("position"=0, "epoch"=nextEpoch+(alg!="raiPlus"))
-    sapply(experts[(nextExpertIndex+1):length(experts)],
-           function(e) e$setNextTest(normY, n, p, nextEpochInfo))
+  if (nIndex < length(experts)) {  # earlier experts set to end
+    nInfo = list("position" = 0, "epoch" = nEpoch+(alg!="raiPlus"))
+    sapply(experts[(nIndex+1):length(experts)],function(e) e$setNextTest(nInfo))
   }
-  experts[[nextExpertIndex]]$setNextTest(normY, n, p)
+  if (nEpoch < experts[[nIndex]]$state()$nextEpochInfo$epoch) {
+    nInfo = list("position" = Inf, "epoch" = nEpoch+(alg!="raiPlus"))
+    experts[[nIndex]]$setNextTest(nInfo)  # Inf so doesn't skip others
+  } else {
+    experts[[nIndex]]$setNextTest()  # will start testing here
+  }
+  experts[[nIndex]]$newModel(alg)  # resets nFailed (to ensure it tests)
 }
 
 #' @name Auction
-runAuction = function(experts, gWealth, theData, y, alg, poly, searchType,
-                      sigma, df, omega, reuse, nMaxTest, verbose, save) {
+runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
+                      sigma, omega, reuse, nMaxTest, verbose, save) {
   # placeholders for results ------------------------
   n = nrow(y)
   p = 0
   theModelFeatures = list()
-  X = matrix(nrow=n, ncol=p); # selected data columns
-  if(save) {
-    results = data.frame(matrix(NA, nrow=1000, ncol=9))
-    colnames(results) = c("ntest", "Name", "Wealth", "Bidder", "Epoch", "Bid",
-                          "Pval", "Rej", "rS")
-  }
+  X = matrix(1, nrow=n); # selected data columns
+  res = y - mean(y)
+  TSS = c(crossprod(res))
+  if(save) { results = list() }
   # start auction ---------------------------
   ntest = 1
   rS = 0  # initial R^2; will keep track of incremental change
   while (ntest <= nMaxTest) {
-    if(verbose) {
-      cat("--- Starting ntest ", ntest, " with total wealth ",
-          gWealth$state()$wealth, " ---\n")
-    }
-    if (gWealth$state()$wealth <= 0) {
-      if (verbose) cat("Experts have no more wealth. ntest: ", ntest-1, "\n")
-      break
-    }
-
     # identify test information   -----------------------------------------
-    expertInfo  = selectExpert(experts, verbose)
-    experts[!expertInfo$active] = NULL
-    expertIndex = expertInfo$expertIndex
-    if(is.null(expertIndex)) { cat("No active experts. ntest: ",ntest,"\n"); break }
-    iExpert = experts[[expertIndex]]
-    xIndex  = iExpert$feature()  # list or vector
-    x = apply(theData[ , unlist(xIndex), drop=F], 1, prod)  # feature vector
+    # if final expert being tested, can have strange effects, so update
+    finishedPass = sapply(experts, function(e) e$finishedPass())
+    if (all(finishedPass)) {
+      sapply(experts, function(e) {
+        e$ud_pass()
+        if (alg!="raiPlus") e$ud_bidder(1)
+      })
+    }
+    finishedEp = sapply(experts, function(e) e$finishedEp())
+    epochs = sapply(experts, function(e) e$state()$epoch)
+    epochsReady = ifelse(finishedPass | finishedEp, NA, epochs)
+    # max: select from end of experts; depth/breath builds list differently
+    eIndex = max(which(epochsReady == min(epochsReady, na.rm=T)))
+    iExpert = experts[[eIndex]]
+    xIndex  = unlist(iExpert$feature())  # list or vector
+    x = as.matrix(apply(theData[ , xIndex, drop=F], 1, prod))  # feature vector
+    rCrit = iExpert$state()$rCrit
+    cost  = iExpert$state()$cost
+    epoch = iExpert$state()$epoch
+    if(verbose) {
+      cat("Test", ntest, "total wealth", gWealth$state()$wealth,
+          "\n  expert", iExpert$name, "epoch", epoch,
+          "\n  bid", iExpert$state()$bid, "cost", cost,
+          "\n  tests", paste(xIndex, collapse="_"), ":\n")
+      if (cost > gWealth$state()$wealth) { cat("**Insufficient wealth.") }
+    }
+    if (cost > gWealth$state()$wealth) { break }
 
     # compute p-value, conduct test, implications of test ------------------
-    pvalOut = computePval(y, X, x, sigma, df)  # takes a-priori known df
-    if (is.na(pvalOut$pval)) {  # should really do a check for VIF > 10 or 20 etc
+    vifOut = vif(res, y, X, x, n, p, m, TSS)
+    # look for % reduction in remaining ESS; sub vif rS can be < rS
+    rChange = max(0, (vifOut$rS - rS)/(1-rS))
+    if (vifOut$rho > 20) {  # could make 20 a user chosen parameter
       if (verbose) {
-        cat("\nVariable ", featureName(xIndex, theData),
-            " is collinear; reject without penalty.\n")
+        cat("**Variable", paste(xIndex, collapse="_"),
+            "\n    is collinear; reject w/o penalty.\n")
       }
-      iExpert$passTest(0)  # added to global, don't test covariate again
-    } else {  # can't get bid before pvalue if rmse unknown
-      bid     = iExpert$bid(pvalOut$rmse, n-p-1)
-      pcrit   = iExpert$pcrit(bid)
-      if(pvalOut$pval > pcrit) {  # fail to reject
-        if(verbose) cat( " < pval", pvalOut$pval, "\n")
-        payment = bid/(1-bid)
-        iExpert$failTest(payment, pvalOut$rmse, pvalOut$rS - rS, pvalOut$pval)
-      } else {  # reject
-        if (verbose) {
-          cat( " > pval", pvalOut$pval, " +++ Add ", featureName(xIndex, theData),"\n")
-        }
-        iExpert$passTest(omega)  # added to global, don't test covariate again
-        rS = pvalOut$rS
-        sapply(experts, function(e) e$newModel()) # reset all model counters
-        X = cbind(X,x)  # add covariate and index to features
-        p = p+1
-        theModelFeatures[[p]] = unlist(xIndex)
-        # if poly=T, new expert for interactions
-        if (poly) {
-          newExp = makeScavengerExpert(gWealth, theModelFeatures,
-                                       featureName(xIndex, theData), alg, sigma)
-          switch(searchType,
-                 "breadth" = { experts = list(list(newExp), experts) },
-                 "depth"   = { experts = list(experts, list(newExp)) }
-          )
-          experts = unlist(experts, recursive=F)
-        }
+      iExpert$rejTest(0)  # don't test covariate again
+    } else if(rChange < rCrit) {  # fail to reject
+      if(verbose) { cat("  rChange", rChange, "<", rCrit, "rCrit\n") }
+      iExpert$failTest(cost, rChange)
+    } else {  # reject
+      if (verbose) {
+        cat("  rChange", rChange, ">", "rCrit", rCrit,
+            "rCrit\n++Add", featureName(xIndex, theData),"++\n")
       }
+      iExpert$rejTest(omega)  # add to wealth, don't test covariate again
+      X = cbind(X,x)  # add covariate and index to features
+      p = p+1
+      theModelFeatures[[p]] = xIndex
+      res = .lm.fit(X, y)$residuals
+      cpRes = c(crossprod(res))
+      if (sigma != "ind") {gWealth$ud_resid(cpRes, sqrt(cpRes/(n-p-1)), n-p-1)}
+      rS = 1 - cpRes/TSS
+      if (poly) {  # new expert for interactions with rejected feature
+        newExp = makeScavengerExpert(gWealth, theModelFeatures,
+                                     paste(sort(xIndex), collapse="_"))
+        switch(searchType,
+               "breadth" = { experts = list(list(newExp), experts) },
+               "depth"   = { experts = list(experts, list(newExp)) }
+        )
+        experts = unlist(experts, recursive=F)
+        if (searchType == "breadth") { eIndex = eIndex + 1 }
+      }
+      sapply(experts, function(e) e$newModel(alg)) # may ud_pass
     }
 
-    # cave information before updates -----------------------
+    # save information before updates -----------------------
     if(save) {
-      results[ntest, "ntest"]  = ntest
-      results[ntest, "Name"]   = featureName(xIndex, theData)
-      results[ntest, "Wealth"] = gWealth$state()$wealth
-      results[ntest, "Bidder"] = iExpert$name
-      results[ntest, "Epoch"]  = iExpert$state()$epoch
-      results[ntest, "Bid"]    = bid
-      results[ntest, "Pval"]   = pvalOut$pval
-      results[ntest, "Rej"]    = pcrit > pvalOut$pval
-      results[ntest, "rS"]     = rS
+      results[[ntest]] = c(
+        ntest   = ntest,
+        wealth  = gWealth$state()$wealth,
+        expert  = iExpert$name,
+        feature = featureName(xIndex, theData),
+        bid     = iExpert$state()$bid,
+        epoch   = epoch,
+        rCrit   = rCrit,
+        rS      = rS,
+        rChange = rChange,
+        rej     = rChange > rCrit
+      )
     }
 
-    # update passes, epochs, and skips ----------------------
-    if (iExpert$finishedPass()) {
-      if (alg!="raiPlus") {  # rai and RH
-        iExpert$udPass()
-        iExpert$udEpoch(1)
-      } else {  # raiPlus
-        epochs = sapply(experts, function(e) e$state()$epoch)
-        if (iExpert$state()$epoch < max(epochs)) {  # expert is "behind"
-          iExpert$udPass()  # cannot update epoch unless finished
-        } else {  # if udPass above, can't have all finished
-          nFinishedPass = sum(sapply(experts, function(e) e$finishedPass()))
-          if (nFinishedPass == length(experts)) {
-            sapply(experts, function(e) e$udPass())
-          }
-        }
-      }
+    # remove or update current expert -----------------------------------
+    if (iExpert$finished()) {  # drop this expert
+      if (verbose) { cat("**Expert", iExpert$name, "finished.\n") }
+      experts[[eIndex]] = NULL
+      eIndex = NULL
+      if(!length(experts)) { cat("No active experts at", ntest+1, "\n"); break }
+    } else if (iExpert$finishedPass() && !iExpert$finishedEpoch()) {  # ud pass
+      iExpert$ud_pass()
+      if (alg != "raiPlus") { iExpert$ud_bidder(1) }  # updates epoch/bid/crit
     }
-
-    if (iExpert$finishedEpoch()) {  # don't check all experts if this one fails
-      if (length(experts) > 1) {  # move to max b/c others may also need to move
-        curEpoch = max(sapply(experts[-expertIndex], function(e) e$state()$epoch))
-        if (iExpert$state()$epoch < curEpoch) {  # if behind
-          if (curEpoch < iExpert$state()$nextEpochInfo$epoch) { # match others
-            iExpert$udNextInfo(max(iExpert$state()$active, na.rm=T), curEpoch)
-          }
-          skipEpochs(list(iExpert), verbose, y, n, p, alg)
-        }
+    # update epochs ------------------------------
+    finishedEp = sapply(experts, function(e) e$finishedEpoch())
+    if (any(finishedEp)) {
+      epochs = sapply(experts, function(e) e$state()$epoch)
+      epochCap = ifelse(any(!finishedEp), min(epochs[!finishedEp]), Inf)
+      if (alg == "raiPlus") {  # most will be at cap
+        expertsMove = experts[which(epochs<=epochCap & finishedEp)]
+      } else {
+        expertsMove = experts[which(epochs<epochCap & finishedEp)]
       }
-      if (all(sapply(experts, function(e) e$finishedEpoch()))) {
-        skipEpochs(experts, verbose, y, n, p, alg)
-      }
+      if (length(expertsMove)) {skipEpochs(expertsMove, verbose, alg, epochCap)}
     }
     ntest = ntest+1
   }
-  if (ntest == nMaxTest) cat("Reached maximum number of tests.")
+  if (ntest == nMaxTest) { cat("Reached maximum number of tests.") }
 
   # prepare output -----------------------------------------
   colnames(y) = "y"
   if (ncol(X)==0) {
     f = "y ~ 1"
   } else {
-    colnames(X) = mapply(featureName, theModelFeatures, MoreArgs = list(theData))
+    colnames(X) = c("1", mapply(featureName,
+                                theModelFeatures, MoreArgs = list(theData)))
     f = paste("y ~", paste(colnames(X),collapse="+"))
   }
-  out = list(formula=f, y=y,  X=X, experts=experts, features=theModelFeatures,
+  out = list(formula=f, y=y,  X=X, features=theModelFeatures,
              options = list(alg=alg, searchType=searchType, poly=poly))
-  if (save) { out$summary=results[1:(ntest-1),] }
+  if (save) { out$summary = do.call(rbind, results)}
+
   out
 }
