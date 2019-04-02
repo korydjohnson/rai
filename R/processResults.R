@@ -31,13 +31,14 @@
 #'   summarise_rai(raiPlus_out)$cost_raiPlus
 
 #' @importFrom dplyr as_tibble %>% mutate_all summarise group_by mutate arrange
-#' @importFrom dplyr ungroup pull
+#' @importFrom dplyr ungroup pull select filter desc n
 #' @importFrom readr parse_guess
-#' @importFrom ggplot2 ggplot geom_line aes scale_y_continuous labs
+#' @importFrom rlang .data
+#' @importFrom ggplot2 ggplot geom_line aes_string scale_y_continuous labs
 
 plot_ntest_rS = function(rawSum) {
   ggplot(rawSum) +
-    geom_line(aes(ntest, rS)) +
+    geom_line(aes_string("ntest", "rS")) +
     scale_y_continuous(limits=c(0,1)) +
     labs(title =  paste("Improvement in", expression(R^2)),
          x = "Number of Tests", y = expression(R^2))
@@ -46,7 +47,7 @@ plot_ntest_rS = function(rawSum) {
 #' @name ProcessRAI
 plot_ntest_wealth = function(rawSum) {
   ggplot(rawSum) +
-    geom_line(aes(ntest, wealth)) +
+    geom_line(aes_string("ntest", "wealth")) +
     labs(title =  paste("Change in Wealth"),
          x = "Number of Tests", y = "Wealth")
 }
@@ -60,47 +61,53 @@ summarise_rai = function(rai_out) {
     mutate_all(parse_guess)
 
   expertSum = rawSummary %>%
-    group_by(expert) %>%
-    summarise(nRej = sum(rej),
-              nFeatures = length(unique(feature))) %>%
-    mutate(order = c(1, rank(nFeatures[-1])+1)) %>%
-    arrange(order)
+    group_by(.data$expert) %>%
+    summarise(nRej = sum(.data$rej),
+              nFeatures = length(unique(.data$feature))) %>%
+    mutate(order = c(1, rank(.data$nFeatures[-1])+1)) %>%
+    arrange(.data$order)
   testSum = rawSummary %>%
-    group_by(feature) %>%
+    group_by(.data$feature) %>%
     summarise(timesTested = n(),
-              nExperts = length(unique(expert)),
-              expert = unique(expert)[1]) %>%
-    group_by(timesTested) %>%
+              nExperts = length(unique(.data$expert)),
+              expert = unique(.data$expert)[1]) %>%
+    group_by(.data$timesTested) %>%
     summarise(count = n(),
-              nExperts = length(unique(expert)),
-              expert = unique(expert)[1]) %>%
-    arrange(desc(timesTested))
+              nExperts = length(unique(.data$expert)),
+              expert = unique(.data$expert)[1]) %>%
+    arrange(desc(.data$timesTested))
   epochSum = rawSummary %>%
-    group_by(epoch) %>%
-    summarise(rCrit = unique(rCrit),
-              nRej = sum(rej)) %>%
-    arrange(epoch)
+    group_by(.data$epoch) %>%
+    summarise(rCrit = unique(.data$rCrit),
+              nRej = sum(.data$rej),
+              max_rS = max(.data$rS)) %>%
+    arrange(.data$epoch)
   cost_raiPlus = rawSummary %>%
     # group by expert b/c can have two experts test same feature
-    # possible for 3rd order: 1,2;  2,3: both test 1,2,3
-    group_by(epoch, expert, feature) %>%
-    summarise(count = n()) %>%
+    # possible for 3rd order: 1,2;  2,3: both test 1_2_3
+    # rai may be able to test more, if saved enough wealth
+    group_by(.data$epoch, .data$expert, .data$feature) %>%
+    summarise(count = n()) %>%  # number of times feature tested each epoch
     ungroup() %>%
-    summarise(sum(count)-n()) %>%
+    summarise(sum(.data$count)-n()) %>%  # rai only tests once
     pull()
+  maxEp = max(rawSummary$epoch)
+  stats$raiPlus = list(maxExtraTests = cost_raiPlus,
+                       maxPotentialIncrease = rai_out$options$r^(maxEp-1) *
+                         (1 - max(filter(rawSummary, .data$epoch==maxEp-1)$rS)))
   stats$nTests = max(rawSummary$ntest)
   stats$nEpochs = max(rawSummary$epoch)
   stats$nPasses = max(testSum$timesTested)
-  stats$maxImprovement = rai_out$options$r^(stats$nEpochs-1)
-  stats$nFeatures = length(rai_out$theModelFeatures)
+  stats$nFeatures = length(rai_out$features)
+  degree = sapply(rai_out$features, length)
+  nUniqueFeatures = sapply(rai_out$features, function(vec) length(unique(vec)))
+  stats$poly = list(tableDegrees = as.data.frame(table(degree)),
+                    tableInteraction = as.data.frame(table(nUniqueFeatures)))
   stats$rS = max(rawSummary$rS)
-  stats$cost_raiPlus =
-    list(extraTests = cost_raiPlus,
-         prop_rai   = cost_raiPlus/(stats$nTests-cost_raiPlus))
   list(plot_rS  = plot_ntest_rS(rawSummary),
        plot_wealth = plot_ntest_wealth(rawSummary),
        experts  = expertSum,
        tests    = testSum,
-       epochs   = epochSum,
+       epochs   = select(epochSum, -.data$max_rS),
        stats    = stats)
 }

@@ -23,6 +23,7 @@ makeRawSource = function(ncolumns) {
   position      = ncolumns  # position in list, work back to front
   prevPosition  = NA
   nactive       = ncolumns
+  vifSaved      = as.list(rep(NA, ncolumns))
 
   list(
     name = "Marginal",
@@ -34,7 +35,11 @@ makeRawSource = function(ncolumns) {
     )},
     finishedPass = function() { position == 0 },
     finished = function() { nactive == 0 },
-    feature = function() {
+    # both get/set are called *after* feature(), so used prevPosition
+    get_vif = function() { vifSaved[[prevPosition]] },
+    set_vif = function(vifOut) { vifSaved[[prevPosition]] <<- vifOut },
+    reset_vif = function() { vifSaved <<- as.list(rep(NA, ncolumns)) },
+    feature  = function() {
       prevPosition <<- position
       position     <<- max(activeColumns[activeColumns<position],na.rm=T)
       return(prevPosition)
@@ -46,10 +51,6 @@ makeRawSource = function(ncolumns) {
     },
     ud_pass = function() {  # move to beginning of list of features
       position <<- max(activeColumns, na.rm=T)
-      prevPosition <<- NA
-    },
-    ud_position = function(nextPosition) {  # used when skipping ahead
-      position     <<- nextPosition
       prevPosition <<- NA
     }
   )

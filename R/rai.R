@@ -33,6 +33,10 @@
 #' @param verbose logical. Should auction output be prited?
 #' @param save logical. Should the auction results be saved? If TRUE, returns a
 #'   summary matrix.
+#' @param lmFit The core fuction that will be used to estimate linear model fits.
+#'   The default is .lm.fit, but other alternatives are possible. Note that it
+#'   does not use formula notation as this is costly. Another recommended option is
+#'   fastLmPure from RcppEigen or related packages.
 #' @return A list which includes the following components: \item{formula}{final
 #'   model formula.} \item{y}{response.} \item{X}{model matrix from final
 #'   model.} \item{experts}{list of experts.} \item{theModelFeatures}{list of
@@ -51,7 +55,8 @@
 
 rai = function(theData, theResponse, alpha=.05, alg="rai", r=.8, poly=(alg!="RH"),
                searchType="breadth", m=500, sigma="step", rmse = NA, df=NA,
-               omega=alpha, reuse=(alg=="RH"), maxTest=Inf, verbose=F, save=T) {
+               omega=alpha, reuse=(alg=="RH"), maxTest=Inf, verbose=F, save=T,
+               lmFit = .lm.fit) {
   stopifnot(searchType %in% c("breadth", "depth") ||
               sigma %in% c("ind", "step") ||
               alg %in% c("rai", "raiPlus", "RH"))
@@ -70,7 +75,8 @@ rai = function(theData, theResponse, alpha=.05, alg="rai", r=.8, poly=(alg!="RH"
                         ncol(theData), reuse, rmse, df)
   experts = list(makeStepwiseExpert(gWealth, ncol(theData)))
   aucOut = runAuction(experts, gWealth, theData, theResponse, alg, poly,
-                      searchType, m, sigma, omega, reuse, maxTest, verbose, save)
+                      searchType, m, sigma, omega, reuse, maxTest, verbose, save,
+                      lmFit)
   aucOut$options$r = r
   aucOut
 }

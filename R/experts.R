@@ -26,77 +26,40 @@
 
 #' @export
 makeExpert = function (bidder, constructor) {
-  # Tells you where to skip to next epoch, position in constructor:active
-  nextEpochInfo   = list(position = 0, epoch = Inf)
-  nFailedTests  = 0  # failed tests in current model -> used to skip epochs
-  expertBase = unlist(list(bidder, constructor), recursive = F)
-  expertBase[which(names(expertBase)=="state")] = NULL  # repeated names
-  expertBase$name = paste0("S", constructor$name)
+  nFailedTests  = 0  # n failed tests in current model
+  expert = unlist(list(bidder, constructor), recursive = F)
+  expert[which(names(expert)=="state")] = NULL  # repeated names
+  expert$name = paste0("S", constructor$name)
 
   # New Functions ----------------------------------------------
-  expertBase$state = function() {
+  expert$state = function() {
     unlist(recursive=F, list(
       bidder$state(),
       constructor$state(),
-      list(
-        nfailed       = nFailedTests,
-        nextEpochInfo = nextEpochInfo
-      )))
+      nfailed = nFailedTests
+      ))
   }
-  expertBase$finishedEpoch = function() {
-    constructor$state()$nactive == nFailedTests
-  }
-  expertBase$rejTest = function(a) {
+  expert$finishedEp = function() { constructor$state()$nactive == nFailedTests }
+  expert$rejTest = function(a) {
     bidder$bidAccepted(a)
     constructor$dropLastFeature()
   }
-  expertBase$failTest = function(cost, rChange) {
+  expert$failTest = function(cost, vifOut) {
     bidder$bidRejected(cost)  # payment removed from global
     nFailedTests <<- nFailedTests + 1
-    nextEpoch = which.max(bidder$state()$rVec <= rChange)
-    if (nextEpoch < nextEpochInfo$epoch) {  # when next reject a test
-      nextEpochInfo$position <<- constructor$state()$prevPosition
-      nextEpochInfo$epoch    <<- nextEpoch
-    }
+    constructor$set_vif(vifOut)
   }
-  expertBase$newModel = function(alg) {  # tests in a new model
+  expert$newEpoch = function(delta) {
+    nFailedTests <<- 0
+    bidder$ud_bidder(delta)
+  }
+  expert$newModel = function(alg) {  # tests in a new model
     nFailedTests  <<- 0
-    nextEpochInfo <<- list(position = 0, epoch = Inf)
     bidder$ud_bidder()
-    if (alg == "raiPlus" && constructor$finishedPass()) {
-      constructor$ud_pass()
-    }
-  }
-  expertBase$setNextTest = function(nextInfo = nextEpochInfo) {  # move and pay
-    stopifnot(nextInfo$epoch >= bidder$state()$epoch)
-    active = constructor$state()$active
-    posCur = constructor$state()$position
-    posNext = min(nextInfo$position, max(active, na.rm=T))  # nI$pos can be Inf
-    cost = 0
-    if (bidder$state()$epoch == nextInfo$epoch) { # same epoch
-      stopifnot(posNext <= posCur)
-      if (posNext < posCur) {  # can be equal, then cost=0
-        cost = bidder$state()$cost * sum(!is.na(active[(posNext+1):posCur]))
-      }
-    } else {
-      cost = cost + bidder$state()$cost * sum(active <= posCur, na.rm=T)
-      bidder$ud_bidder(1)
-      while (bidder$state()$epoch < nextInfo$epoch) { # pay for skipped epochs
-        cost = cost + bidder$state()$cost * sum(!is.na(active))
-        bidder$ud_bidder(1)
-      }
-      if (posNext == 0) {  # full pass in final epoch; don't update epoch
-        cost = cost + bidder$state()$cost * sum(!is.na(active))
-      } else {
-        cost = cost + bidder$state()$cost * sum(active > posNext, na.rm=T)
-      }
-    }
-    # pay, move position (epoch moved above)
-    bidder$bidRejected(cost)
-    constructor$ud_position(posNext)
+    constructor$reset_vif()
   }
 
-  expertBase
+  expert
 }
 
 #' @name Experts

@@ -8,7 +8,7 @@
 rai(theData, theResponse, alpha = 0.05, alg = "rai", r = 0.8,
   poly = (alg != "RH"), searchType = "breadth", m = 500,
   sigma = "step", rmse = NA, df = NA, omega = alpha, reuse = (alg
-  == "RH"), maxTest = Inf, verbose = F, save = T)
+  == "RH"), maxTest = Inf, verbose = F, save = T, lmFit = .lm.fit)
 }
 \arguments{
 \item{theData}{matrix of covariates.}
@@ -52,6 +52,11 @@ for RAI or RAIplus as the effect is negligible.}
 
 \item{save}{logical. Should the auction results be saved? If TRUE, returns a
 summary matrix.}
+
+\item{lmFit}{The core fuction that will be used to estimate linear model fits.
+The default is .lm.fit, but other alternatives are possible. Note that it
+does not use formula notation as this is costly. Another recommended option is
+fastLmPure from RcppEigen or related packages.}
 }
 \value{
 A list which includes the following components: \item{formula}{final

@@ -12,7 +12,7 @@ checkPrevPosition = function(object, value) {
 
 # tests -------------------------------------------------------------------
 rawSource = makeRawSource(10)
-test_that("extracting/dropping features works; moving position", {
+test_that("extracting/dropping features works", {
   checkPosition(rawSource, 10)
   expect_equal(rawSource$feature(), 10)
   checkPosition(rawSource, 9)
@@ -24,9 +24,6 @@ test_that("extracting/dropping features works; moving position", {
   checkPrevPosition(rawSource, 9)
   rawSource$ud_pass()
   checkPosition(rawSource, 9)
-  expect_true(is.na(rawSource$state()$prevPosition))
-  rawSource$ud_position(3)
-  checkPosition(rawSource, 3)
   expect_true(is.na(rawSource$state()$prevPosition))
 })
 
@@ -45,8 +42,5 @@ test_that("scavenger tests interactions", {
   checkPrevPosition(scavSource, 5)
   scavSource$ud_pass()
   checkPosition(scavSource, 5)
-  expect_true(is.na(scavSource$state()$prevPosition))
-  scavSource$ud_position(3)
-  checkPosition(scavSource, 3)
   expect_true(is.na(scavSource$state()$prevPosition))
 })

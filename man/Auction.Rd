@@ -3,24 +3,26 @@
 \name{Auction}
 \alias{Auction}
 \alias{featureName}
+\alias{rowProd}
 \alias{vif}
-\alias{skipEpochs}
 \alias{runAuction}
 \title{Internal function to manage multiple experts.}
 \usage{
 featureName(indices, theData)
 
-vif(res, y, X, x, n, p, m, TSS)
+rowProd(mat)
 
-skipEpochs(experts, verbose, alg, epochCap)
+vif(res, y, X, x, n, p, m, TSS, lmFit)
 
 runAuction(experts, gWealth, theData, y, alg, poly, searchType, m, sigma,
-  omega, reuse, nMaxTest, verbose, save)
+  omega, reuse, nMaxTest, verbose, save, lmFit)
 }
 \arguments{
 \item{indices}{list of columns of theData used in an interaction.}
 
 \item{theData}{covariate matrix.}
+
+\item{mat}{data matrix for interaction feature.}
 
 \item{res}{residuals from current model}
 
@@ -39,17 +41,18 @@ factor estimate of r.squared.}
 
 \item{TSS}{total sum of squares; considering current residuals to be the response.}
 
+\item{lmFit}{The core fuction that will be used to estimate linear model fits.
+The default is .lm.fit, but other alternatives are possible. Note that it
+does not use formula notation as this is costly. Another recommended option is
+fastLmPure from RcppEigen or related packages.}
+
 \item{experts}{list of expert objects. Each expert is the output of
 makeStepwiseExpert or makeScavengerExpert.}
 
-\item{verbose}{logical. Should auction output be prited?}
+\item{gWealth}{global wealth object, output of gWealthStep.}
 
 \item{alg}{algorithm can be one of "rai", "raiPlus", or "RH" (Revisiting
 Holm).}
-
-\item{epochCap}{when skipping epochs, cannot skip passed this point.}
-
-\item{gWealth}{global wealth object, output of gWealthStep.}
 
 \item{poly}{logical. Should the algorithm look for higher-order polynomials?}
 
@@ -66,6 +69,8 @@ considered a test of the same hypothsis? Reusing wealth isn't implemented
 for RAI or RAIplus (effect is negligible)}
 
 \item{nMaxTest}{maximum number of tests}
+
+\item{verbose}{logical. Should auction output be prited?}
 
 \item{save}{logical. Should the auction results be saved? If TRUE, returns a
 summary matrix.}

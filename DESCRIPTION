@@ -18,7 +18,8 @@ Imports:
     stats,
     dplyr,
     ggplot2,
-    readr
+    readr,
+    rlang
 Suggests: 
     testthat
 RoxygenNote: 6.1.1
