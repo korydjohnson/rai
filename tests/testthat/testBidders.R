@@ -2,10 +2,13 @@ context("Bidder Objects")
 library(rai)
 
 # set up ------------------------------------------------------------------
-load("theResponse.rda")
-load("theData.rda")
-full.lm = lm(theResponse ~ theData)
-df = full.lm$df.resid; sigma = sqrt(crossprod(resid(full.lm))/df)
+data("mtcars")
+theResponse = mtcars$mpg
+theData = mtcars[ ,-1]
+lmSum = summary(lm(theResponse~theData[,1]))
+rmse = lmSum$sigma
+df = nrow(theData)-2
+TSS = var(theResponse)*(nrow(theData)-1)
 
 # helper function ---------------------------------------------------------
 checkWealth = function(object, value) {
@@ -13,8 +16,7 @@ checkWealth = function(object, value) {
 }
 
 # tests -------------------------------------------------------------------
-gWealth = gWealthStep(ncol(theData), nrow(theData), var(theResponse),
-                      alg="rai", sigma, df, r=.8, reuse=F, .05)
+gWealth = gWealthStep(.05, "rai", .8, TSS, ncol(theData), F, rmse, df)
 test_that("wealth initialized and manipulated properly", {
   checkWealth(gWealth, .05)
   gWealth$bidAccepted(.05)
@@ -41,14 +43,12 @@ test_that("stepwise bidder manages global wealth object", {
 
 test_that("stepwise bidder and global wealth bid/pcrit correctly", {
   expect_equal(stepBid$state()$epoch, 1)
-  bid = stepBid$bid(1, 1)
-  expect_equal(gWealth$bid(1, 1, 1), bid)
-  pcrit = stepBid$pcrit(bid)
-  expect_equal(gWealth$pcrit(bid, 1), pcrit)
-  stepBid$udEpoch(10)
-  expect_equal(stepBid$state()$epoch, 11)
-  bid = stepBid$bid(1, 1)
-  expect_equal(gWealth$bid(11, 1, 1), bid)
-  pcrit = stepBid$pcrit(bid)
-  expect_equal(gWealth$pcrit(bid, 11), pcrit)
+  stepBid$ud_bidder()
+  expect_equal(stepBid$state()$rCrit, stepBid$state()$rVec[1])
+  stepBid$ud_bidder(5)
+  expect_equal(stepBid$state()$rCrit, gWealth$state()$rVec[6])
+  bid = 2*pt(-sqrt(lmSum$r.squared)*sqrt(TSS)/rmse, df)
+  rCrit = qt(lmSum$coefficients[2, 4]/2, df)^2*rmse^2/TSS
+  expect_equal(bid, lmSum$coefficients[2, 4])
+  expect_equal(rCrit, lmSum$r.squared)
 })

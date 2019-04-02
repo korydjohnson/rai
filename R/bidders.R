@@ -13,79 +13,77 @@
 #'   not set because these are internal functions called by \code{\link{rai}}
 #'   and \code{\link{runAuction}} and all arguments are required.
 #'
-#' @param p number of covariates (only used when alg == "RH").
-#' @param n number of observations.
-#' @param varY variance of the response.
+#' @param wealth starting alpha-wealth.
 #' @param alg algorithm can be one of "rai", "raiPlus", or "RH" (Revisiting
 #'   Holm).
-#' @param sigma A character string or numeric value. String "ind" uses the rmse
-#'   from the full regression model. String "sand" uses sandwich estimation for
-#'   each test.
-#' @param df if a numeric sigma value is given, must also provide the degrees of
-#'   freedom for the estimate.
 #' @param r RAI rejects tests which increase R^2 by a factor r^s, where s is the
 #'   epoch.
+#' @param TSS total sum of squares of the response.
+#' @param p number of covariates (only used when alg == "RH").
 #' @param reuse logical. Should repeated tests of the same covariate be
 #'   considered a test of the same hypothsis?
-#' @param wealth starting alpha-wealth.
+#' @param rmse initial (or independent) estimate of residual standard error
+#' @param df degrees of freedom of rmse.
 #' @param gWealth a global wealth object; output of gWealthStep.
 #' @return A closure containing a list of functions.
 
-gWealthStep = function(p, n, varY, alg, sigma, df, r, reuse, wealth) {
-  normY = (n-1)*varY
-  rVec = c(r^(1:(10/(1-r))), 0)  # 0 prevents NA in epoch skip
-  bids = pcrits = NA
+#' @export
+gWealthStep = function(wealth, alg, r, TSS, p, reuse, rmse, df) {
   # Compute thresholds for p-values and bids for stepwise; either RAI or RH
-  if (alg == "RH") {  # Revisiting Holm thresholds
+  if (alg == "RH") {  # Revisiting Holm; need entire rVec
     holm = c(wealth/(p:1), 1:5)  # holm critical values, 1:5 allows termination
-    bids = pcrits = c(holm/(1+holm), 1)  # fail -> pay extra -> rescale; 1 prevents NA in epoch skip
-    if (reuse) {
+    bids = rejL = c(holm/(1+holm), 1)  # holm *payment*; 1 ensures epoch skip
+    if (reuse) {  # rejection levels condition on previous test
       for (i in 2:(p+1)) {
-        pcrits[i] = bids[i] + pcrits[i-1] - bids[i]*pcrits[i-1]
+        rejL[i] = bids[i] + rejL[i-1] - bids[i]*rejL[i-1]
       }
     }
-    rVec = 1-pcrits  # "rejectionVec"; needed to skip epochs; 1- so reject when rVec < 1-pval
-  } else if (is.numeric(sigma) && is.numeric(df)) {  # rai/raiPlus, known sigma/df
-    bids = pcrits = 2*pt(-sqrt(c(normY/sigma^2) * rVec), df)  # convert R^2 to p-values
+    rVec = c(qt(rejL/2, df)^2*rmse^2/TSS, 0)  # initial conversion to rS scale
+  } else {  # rai/raiPlus
+    rVec = c(r^(1:(10/(1-r))), 0)  # 0 prevents NA in epoch skip
   }
 
   list(
-    state = function() { list(wealth = wealth) },
+    state = function() {
+      list(wealth = wealth,
+           rVec = rVec)
+    },
     bidAccepted = function(a) { wealth <<- wealth + a },
     bidRejected = function(d) { wealth <<- wealth - d },
-    rVec        = function() { rVec },
-    bids        = function() { bids },
-    bid         = function(s, rmse, df) {
-      if (sigma == "sand" && alg!="RH") {
-        bid = 2*pt(-sqrt(normY * rVec[s]) / rmse, df)
-      } else {
-        bid = bids[s]
+    ud_resid = function(resTSS, rmse, df) {  # think of new resid as y
+      TSS <<- resTSS; rmse <<- rmse; df   <<- df
+      if (alg == "RH") {
+        rVec <<- c(qt(rejL/2, df)^2*rmse^2/TSS, 0)  # convert to rS scale
       }
-      min(bid, wealth/(1+wealth), .25)
     },
-    pcrit = function(bid, s) {
-      if (!reuse) {
-        bid
-      } else {
-        if (isTRUE(all.equal(bid, bids[s]))) {
-          pcrits[s]
-        } else {  # last test with remaining wealth
-          ifelse(reuse, bid + pcrits[s-1]-bid*pcrits[s-1], bid)
-        }
-      }
+    bid = function(epoch) {  # ud rCrit; return bid; always used -> can't reduce
+      2*pt(-sqrt(rVec[epoch])*sqrt(TSS)/rmse, df)  # p-value scale
     }
   )
 }
 
 #' @name Bidders
+#' @export
 makeStepwiseBidder = function(gWealth) {
-  s = 1  # epoch
-  bidderBase = gWealth
-  bidderBase$state   = function() {
-    unlist(list(gWealth$state(), list(epoch = s)), recursive = F)
+  epoch = 1
+  rCrit = gWealth$state()$rVec[epoch]
+  bid = gWealth$bid(epoch)
+  cost  = bid/(1-bid)
+
+  bidder = gWealth
+  bidder$state   = function() {
+    unlist(list(gWealth$state(),
+                list(epoch = epoch,
+                     bid   = bid,
+                     cost  = cost,
+                     rCrit = rCrit)), recursive = F)
   }
-  bidderBase$udEpoch = function(delta) { s <<- s + delta }
-  bidderBase$bid     = function(rmse, df)  { gWealth$bid(s, rmse, df) }
-  bidderBase$pcrit   = function(bid)  { gWealth$pcrit(bid, s) }
-  bidderBase
+  bidder$ud_bidder = function(delta=0) {
+    epoch <<- epoch + delta
+    rCrit <<- gWealth$state()$rVec[epoch]
+    bid   <<- gWealth$bid(epoch)
+    cost  <<- bid/(1-bid)
+  }
+
+  bidder
 }

@@ -6,34 +6,29 @@
 \alias{makeStepwiseBidder}
 \title{Making Bidder Objects}
 \usage{
-gWealthStep(p, n, varY, alg, sigma, df, r, reuse, wealth)
+gWealthStep(wealth, alg, r, TSS, p, reuse, rmse, df)
 
 makeStepwiseBidder(gWealth)
 }
 \arguments{
-\item{p}{number of covariates (only used when alg == "RH").}
-
-\item{n}{number of observations.}
-
-\item{varY}{variance of the response.}
+\item{wealth}{starting alpha-wealth.}
 
 \item{alg}{algorithm can be one of "rai", "raiPlus", or "RH" (Revisiting
 Holm).}
 
-\item{sigma}{A character string or numeric value. String "ind" uses the rmse
-from the full regression model. String "sand" uses sandwich estimation for
-each test.}
-
-\item{df}{if a numeric sigma value is given, must also provide the degrees of
-freedom for the estimate.}
-
 \item{r}{RAI rejects tests which increase R^2 by a factor r^s, where s is the
 epoch.}
+
+\item{TSS}{total sum of squares of the response.}
+
+\item{p}{number of covariates (only used when alg == "RH").}
 
 \item{reuse}{logical. Should repeated tests of the same covariate be
 considered a test of the same hypothsis?}
 
-\item{wealth}{starting alpha-wealth.}
+\item{rmse}{initial (or independent) estimate of residual standard error}
+
+\item{df}{degrees of freedom of rmse.}
 
 \item{gWealth}{a global wealth object; output of gWealthStep.}
 }

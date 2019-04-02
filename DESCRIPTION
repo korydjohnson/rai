@@ -1,7 +1,7 @@
 Package: rai
 Type: Package
 Title: Implements Revisiting-Alpha-Investing For Polynomial Regression
-Version: 0.0.0.9000
+Version: 0.0.0.9100
 Authors@R: person("Kory", "Johnson", email = "korydjohnson@gmail.com",
   role = c("aut", "cre"))
 Description: Adapts stepwise regression to adaptively search for polynomials.
@@ -15,8 +15,11 @@ LazyData: true
 URL: https://github.com/korydjohnson/rai
 BugReports: https://github.com/korydjohnson/rai/issues
 Imports:
-    stats
+    stats,
+    dplyr,
+    ggplot2,
+    readr,
+    rlang
 Suggests: 
-    sandwich (>= 2.5),
     testthat
 RoxygenNote: 6.1.1
