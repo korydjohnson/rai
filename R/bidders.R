@@ -27,7 +27,6 @@
 #' @param gWealth a global wealth object; output of gWealthStep.
 #' @return A closure containing a list of functions.
 
-#' @export
 gWealthStep = function(wealth, alg, r, TSS, p, reuse, rmse, df) {
   # Compute thresholds for p-values and bids for stepwise; either RAI or RH
   if (alg == "RH") {  # Revisiting Holm; need entire rVec
@@ -40,7 +39,7 @@ gWealthStep = function(wealth, alg, r, TSS, p, reuse, rmse, df) {
     }
     rVec = c(qt(rejL/2, df)^2*rmse^2/TSS, 0)  # initial conversion to rS scale
   } else {  # rai/raiPlus
-    rVec = c(r^(1:(10/(1-r))), 0)  # 0 prevents NA in epoch skip
+    rVec = c(r^(1:(10/(1-r))), 0)  # 0 ensures termination
   }
 
   list(
@@ -63,7 +62,6 @@ gWealthStep = function(wealth, alg, r, TSS, p, reuse, rmse, df) {
 }
 
 #' @name Bidders
-#' @export
 makeStepwiseBidder = function(gWealth) {
   epoch = 1
   rCrit = gWealth$state()$rVec[epoch]

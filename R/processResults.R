@@ -82,28 +82,18 @@ summarise_rai = function(rai_out) {
               nRej = sum(.data$rej),
               max_rS = max(.data$rS)) %>%
     arrange(.data$epoch)
-  cost_raiPlus = rawSummary %>%
-    # group by expert b/c can have two experts test same feature
-    # possible for 3rd order: 1,2;  2,3: both test 1_2_3
-    # rai may be able to test more, if saved enough wealth
-    group_by(.data$epoch, .data$expert, .data$feature) %>%
-    summarise(count = n()) %>%  # number of times feature tested each epoch
-    ungroup() %>%
-    summarise(sum(.data$count)-n()) %>%  # rai only tests once
-    pull()
   maxEp = max(rawSummary$epoch)
-  stats$raiPlus = list(maxExtraTests = cost_raiPlus,
-                       maxPotentialIncrease = rai_out$options$r^(maxEp-1) *
-                         (1 - max(filter(rawSummary, .data$epoch==maxEp-1)$rS)))
+  stats$maxPotentialIncrease_raiPlus = rai_out$options$r^(maxEp-1) *
+    (1 - max(filter(rawSummary, .data$epoch==maxEp-1)$rS))
   stats$nTests = max(rawSummary$ntest)
   stats$nEpochs = max(rawSummary$epoch)
-  stats$nPasses = max(testSum$timesTested)
   stats$nFeatures = length(rai_out$features)
   degree = sapply(rai_out$features, length)
   nUniqueFeatures = sapply(rai_out$features, function(vec) length(unique(vec)))
   stats$poly = list(tableDegrees = as.data.frame(table(degree)),
                     tableInteraction = as.data.frame(table(nUniqueFeatures)))
   stats$rS = max(rawSummary$rS)
+  stats$nFeaturesTested = length(unique(rai_out$summary[ ,"feature"]))
   list(plot_rS  = plot_ntest_rS(rawSummary),
        plot_wealth = plot_ntest_wealth(rawSummary),
        experts  = expertSum,

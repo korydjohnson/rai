@@ -2,29 +2,17 @@
 % Please edit documentation in R/auction.R
 \name{Auction}
 \alias{Auction}
-\alias{featureName}
-\alias{rowProd}
 \alias{vif}
 \alias{runAuction}
 \title{Internal function to manage multiple experts.}
 \usage{
-featureName(indices, theData)
-
-rowProd(mat)
-
 vif(res, y, X, x, n, p, m, TSS, lmFit)
 
 runAuction(experts, gWealth, theData, y, alg, poly, searchType, m, sigma,
   omega, reuse, nMaxTest, verbose, save, lmFit)
 }
 \arguments{
-\item{indices}{list of columns of theData used in an interaction.}
-
-\item{theData}{covariate matrix.}
-
-\item{mat}{data matrix for interaction feature.}
-
-\item{res}{residuals from current model}
+\item{res}{residuals from current model.}
 
 \item{y}{the response as a single column matrix.}
 
@@ -51,6 +39,8 @@ makeStepwiseExpert or makeScavengerExpert.}
 
 \item{gWealth}{global wealth object, output of gWealthStep.}
 
+\item{theData}{covariate matrix.}
+
 \item{alg}{algorithm can be one of "rai", "raiPlus", or "RH" (Revisiting
 Holm).}
 
@@ -66,7 +56,7 @@ higher-order polynomials. One of "breadth" (more base features) or "depth"
 
 \item{reuse}{logical. Should repeated tests of the same covariate be
 considered a test of the same hypothsis? Reusing wealth isn't implemented
-for RAI or RAIplus (effect is negligible)}
+for RAI or RAIplus (effect is negligible).}
 
 \item{nMaxTest}{maximum number of tests}
 
@@ -78,9 +68,9 @@ summary matrix.}
 \value{
 A list which includes the following components: \item{formula}{final
   model formula.} \item{y}{response.} \item{X}{model matrix from final
-  model.} \item{experts}{list of experts.} \item{theModelFeatures}{list of
-  feature names in the final model.} \item{options}{options given to RAI:
-  algorithm, searchType, poly}
+  model.} \item{features}{list of interactions included in formula.}
+  \item{summary}{included if save=T; matrix where each row contains the
+  summary information of a single test.}
 }
 \description{
 runAuction is the workhorse of the rai package: it takes an

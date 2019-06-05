@@ -2,18 +2,30 @@
 % Please edit documentation in R/rai.R
 \name{RAI}
 \alias{RAI}
+\alias{prepareData}
 \alias{rai}
-\title{Main function for RAI regression.}
+\title{Main function for Revisiting Alpha-Investing (RAI) regression.}
 \usage{
+prepareData(theData, theResponse, poly = T, startDeg = 1)
+
 rai(theData, theResponse, alpha = 0.05, alg = "rai", r = 0.8,
-  poly = (alg != "RH"), searchType = "breadth", m = 500,
-  sigma = "step", rmse = NA, df = NA, omega = alpha, reuse = (alg
-  == "RH"), maxTest = Inf, verbose = F, save = T, lmFit = .lm.fit)
+  poly = alg != "RH", startDeg = 1, searchType = "breadth",
+  m = 500, sigma = "step", rmse = NA, df = NA, omega = alpha,
+  reuse = (alg == "RH"), maxTest = Inf, verbose = F, save = T,
+  lmFit = .lm.fit)
 }
 \arguments{
 \item{theData}{matrix of covariates.}
 
-\item{theResponse}{response vector stored as a single column matrix.}
+\item{theResponse}{response vector or single column matrix.}
+
+\item{poly}{logical. Should the algorithm look for higher-order polynomials?}
+
+\item{startDeg}{This is the starting degree for polynomial regression. It
+allows the search to start with lower order polynomials such as square
+roots. This alleviates some problems with high-dimensional polynomials as a
+4th degree polynomial where startDeg=1/2 is only a quadratic on the
+original scale.}
 
 \item{alpha}{level of procedure.}
 
@@ -23,14 +35,12 @@ Holm).}
 \item{r}{RAI rejects tests which increase R^2 by a factor r^s, where s is the
 epoch.}
 
-\item{poly}{logical. Should the algorithm look for higher-order polynomials?}
-
 \item{searchType}{A character string specifying the prioritization of
 higher-order polynomials. One of "breadth" (more base features) or "depth"
 (higher orders).}
 
 \item{m}{number of observations used in subsampling for variance inflation
-factor estimate of r.squared.}
+factor estimate of r.squared. Set m=Inf to use full data.}
 
 \item{sigma}{type of error estimate used; one of "ind" or "step". If "ind",
 you must provide a numeric value for rmse and df.}
@@ -53,22 +63,40 @@ for RAI or RAIplus as the effect is negligible.}
 \item{save}{logical. Should the auction results be saved? If TRUE, returns a
 summary matrix.}
 
-\item{lmFit}{The core fuction that will be used to estimate linear model fits.
-The default is .lm.fit, but other alternatives are possible. Note that it
-does not use formula notation as this is costly. Another recommended option is
-fastLmPure from RcppEigen or related packages.}
+\item{lmFit}{The core fuction that will be used to estimate linear model
+fits. The default is .lm.fit, but other alternatives are possible. Note
+that it does not use formula notation as this is costly. Another
+recommended option is fastLmPure from RcppEigen or related packages.}
 }
 \value{
 A list which includes the following components: \item{formula}{final
   model formula.} \item{y}{response.} \item{X}{model matrix from final
-  model.} \item{experts}{list of experts.} \item{theModelFeatures}{list of
-  feature names in the final model.} \item{options}{options given to RAI:
-  algorithm, searchType, r, poly}
+  model.} \item{features}{list of interactions included in formula.}
+  \item{summary}{list of feature names in the final model.} \item{time}{run
+  time.} \item{options}{options given to RAI: alg, searchType, poly, r.}
+  \item{model}{linear model object using selected model}
 }
 \description{
-RAI is a wrapper function to create the required objects and
-  manage the input/ouptut of the runAuction function. Using poly=F is an
-  efficient and statistically valid way to run stepwise regression.
+The function rai is a wrapper that creates and manages the
+  inputs and ouptuts of the \code{\link{runAuction}} function. Using poly=F
+  is an efficient and statistically valid way to run and terminate stepwise
+  regression. The function prepareData is provided in order to make
+  generating predictions on test data easier: it is used by rai to process
+  the data prior to running, and is necessary to make column names and
+  information match in order to use the model object returned by rai.
+}
+\details{
+Missing values are treated as follows: all observations with missing
+  values in theResponse are removed; numeric columns in theData have missing
+  values imputed by the mean of the column and an indicator column is added
+  to note missingness; missing values in factor or binary columns are given
+  the value "NA", which creates an additional group for missing values. Note
+  that as rai is run using the output of model.matrix, it is not guaranteed
+  that all categories from a factor are included in the regression. Column
+  names may also be modified to be syntactically valid. The model object can
+  be used to generate predictions on test data. Note that if default
+  conversions were used when running rai, then they must be used again with
+  prepareData for the test data prior to producing predictions.
 }
 \examples{
   data("CO2")

@@ -18,5 +18,5 @@ test_that("categorical data converted; pass & epoch", {
   theResponse = CO2$uptake
   theData = CO2[ ,-5]
   rai_out = rai(theData, theResponse)
-  rai_out = rai(theData, theResponse, alg="raiPlus")
+  rai_out = rai(theData, theResponse, alg="raiPlus", verbose=T)
 })
