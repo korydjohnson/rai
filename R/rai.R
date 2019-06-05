@@ -58,20 +58,23 @@
 #'   fits. The default is .lm.fit, but other alternatives are possible. Note
 #'   that it does not use formula notation as this is costly. Another
 #'   recommended option is fastLmPure from RcppEigen or related packages.
+#' @param x an R object.
 #' @return A list which includes the following components: \item{formula}{final
 #'   model formula.} \item{y}{response.} \item{X}{model matrix from final
 #'   model.} \item{features}{list of interactions included in formula.}
 #'   \item{summary}{list of feature names in the final model.} \item{time}{run
 #'   time.} \item{options}{options given to RAI: alg, searchType, poly, r.}
-#'   \item{model}{linear model object using selected model}
+#'   \item{model}{linear model object using selected model} A summary method is
+#'   provided in order to generate futher output and graphics. This summary
+#'   method requires the tidyverse package.
 #' @examples
 #'   data("CO2")
 #'   theResponse = CO2$uptake
 #'   theData = CO2[ ,-5]
 #'   rai_out = rai(theData, theResponse)
-#'   summarise_rai(rai_out)
+#'   summary(rai_out)
 #'   raiPlus_out = rai(theData, theResponse, alg="raiPlus")
-#'   summarise_rai(raiPlus_out)$cost_raiPlus
+#'   summary(raiPlus_out)
 #' @importFrom stats lm model.matrix pt qt resid var sd .lm.fit
 
 #' @export
@@ -120,7 +123,11 @@ modMissingData = function(dataList) {
 
 #' @name RAI
 #' @export
-rai = function(theData, theResponse, alpha=.05, alg="rai", r=.8, poly=alg!="RH",
+is.rai = function(x) inherits(x, "rai")
+
+#' @name RAI
+#' @export
+rai = function(theData, theResponse, alpha=.1, alg="rai", r=.8, poly=alg!="RH",
                startDeg=1, searchType="breadth", m=500, sigma="step", rmse = NA,
                df=NA, omega=alpha, reuse=(alg=="RH"), maxTest=Inf, verbose=F,
                save=T, lmFit = .lm.fit) {
@@ -148,5 +155,6 @@ rai = function(theData, theResponse, alpha=.05, alg="rai", r=.8, poly=alg!="RH",
   aucOut$time = Sys.time() - timeStart
   aucOut$options = list(alg=alg, searchType=searchType, poly=poly, r=r)
   aucOut$model = lm(aucOut$formula, data.frame(y=theResponse, theData))
+  class(aucOut) = "rai"
   aucOut
 }

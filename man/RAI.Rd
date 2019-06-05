@@ -3,12 +3,15 @@
 \name{RAI}
 \alias{RAI}
 \alias{prepareData}
+\alias{is.rai}
 \alias{rai}
 \title{Main function for Revisiting Alpha-Investing (RAI) regression.}
 \usage{
 prepareData(theData, theResponse, poly = T, startDeg = 1)
 
-rai(theData, theResponse, alpha = 0.05, alg = "rai", r = 0.8,
+is.rai(x)
+
+rai(theData, theResponse, alpha = 0.1, alg = "rai", r = 0.8,
   poly = alg != "RH", startDeg = 1, searchType = "breadth",
   m = 500, sigma = "step", rmse = NA, df = NA, omega = alpha,
   reuse = (alg == "RH"), maxTest = Inf, verbose = F, save = T,
@@ -26,6 +29,8 @@ allows the search to start with lower order polynomials such as square
 roots. This alleviates some problems with high-dimensional polynomials as a
 4th degree polynomial where startDeg=1/2 is only a quadratic on the
 original scale.}
+
+\item{x}{an R object.}
 
 \item{alpha}{level of procedure.}
 
@@ -74,7 +79,9 @@ A list which includes the following components: \item{formula}{final
   model.} \item{features}{list of interactions included in formula.}
   \item{summary}{list of feature names in the final model.} \item{time}{run
   time.} \item{options}{options given to RAI: alg, searchType, poly, r.}
-  \item{model}{linear model object using selected model}
+  \item{model}{linear model object using selected model} A summary method is
+  provided in order to generate futher output and graphics. This summary
+  method requires the tidyverse package.
 }
 \description{
 The function rai is a wrapper that creates and manages the
@@ -103,7 +110,7 @@ Missing values are treated as follows: all observations with missing
   theResponse = CO2$uptake
   theData = CO2[ ,-5]
   rai_out = rai(theData, theResponse)
-  summarise_rai(rai_out)
+  summary(rai_out)
   raiPlus_out = rai(theData, theResponse, alg="raiPlus")
-  summarise_rai(raiPlus_out)$cost_raiPlus
+  summary(raiPlus_out)
 }

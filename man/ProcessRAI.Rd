@@ -4,20 +4,23 @@
 \alias{ProcessRAI}
 \alias{plot_ntest_rS}
 \alias{plot_ntest_wealth}
-\alias{summarise_rai}
+\alias{summary.rai}
 \title{Summarising RAI Output}
 \usage{
 plot_ntest_rS(rawSum)
 
 plot_ntest_wealth(rawSum)
 
-summarise_rai(rai_out)
+\method{summary}{rai}(object, ...)
 }
 \arguments{
 \item{rawSum}{processed version of rai summary stored as a tibble with
 correct column parsing.}
 
-\item{rai_out}{list output from \code{\link{rai}} function.}
+\item{object}{an object of class rai; expected to be the list output from the
+\code{\link{rai}} function.}
+
+\item{...}{additional arguments affecting the summary produced.}
 }
 \value{
 A list which includes the following components: \item{plot_rS}{plot
@@ -41,8 +44,8 @@ Processes the output from the \code{\link{rai}} function.
   data("CO2")
   theResponse = CO2$uptake
   theData = CO2[ ,-5]
-  rai_out = rai(theData, theResponse)
-  summarise_rai(rai_out)
+  object = rai(theData, theResponse)
+  summary(object)
   raiPlus_out = rai(theData, theResponse, alg="raiPlus")
-  summarise_rai(raiPlus_out)$cost_raiPlus
+  summary(raiPlus_out)
 }

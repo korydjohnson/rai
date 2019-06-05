@@ -5,9 +5,11 @@
 #' @description Processes the output from the \code{\link{rai}} function.
 #'   Requires dplyr, tibble, and ggplot2 packages.
 #'
-#' @param rai_out list output from \code{\link{rai}} function.
+#' @param object an object of class rai; expected to be the list output from the
+#' \code{\link{rai}} function.
 #' @param rawSum processed version of rai summary stored as a tibble with
 #'   correct column parsing.
+#' @param ... additional arguments affecting the summary produced.
 #' @return A list which includes the following components: \item{plot_rS}{plot
 #'   of the change in r.squared over time (number of tests conducted).}
 #'   \item{plot_wealth}{plot of the change in r.squared over time (number of
@@ -25,10 +27,10 @@
 #'   data("CO2")
 #'   theResponse = CO2$uptake
 #'   theData = CO2[ ,-5]
-#'   rai_out = rai(theData, theResponse)
-#'   summarise_rai(rai_out)
+#'   object = rai(theData, theResponse)
+#'   summary(object)
 #'   raiPlus_out = rai(theData, theResponse, alg="raiPlus")
-#'   summarise_rai(raiPlus_out)$cost_raiPlus
+#'   summary(raiPlus_out)
 
 #' @importFrom dplyr as_tibble %>% mutate_all summarise group_by mutate arrange
 #' @importFrom dplyr ungroup pull select filter desc n
@@ -54,9 +56,9 @@ plot_ntest_wealth = function(rawSum) {
 
 #' @name ProcessRAI
 #' @export
-summarise_rai = function(rai_out) {
+summary.rai = function(object, ...) {
   stats = list()
-  rawSummary = rai_out$summary %>%
+  rawSummary = object$summary %>%
     as_tibble() %>%
     mutate_all(parse_guess)
 
@@ -83,17 +85,17 @@ summarise_rai = function(rai_out) {
               max_rS = max(.data$rS)) %>%
     arrange(.data$epoch)
   maxEp = max(rawSummary$epoch)
-  stats$maxPotentialIncrease_raiPlus = rai_out$options$r^(maxEp-1) *
+  stats$maxPotentialIncrease_raiPlus = object$options$r^(maxEp-1) *
     (1 - max(filter(rawSummary, .data$epoch==maxEp-1)$rS))
   stats$nTests = max(rawSummary$ntest)
   stats$nEpochs = max(rawSummary$epoch)
-  stats$nFeatures = length(rai_out$features)
-  degree = sapply(rai_out$features, length)
-  nUniqueFeatures = sapply(rai_out$features, function(vec) length(unique(vec)))
+  stats$nFeatures = length(object$features)
+  degree = sapply(object$features, length)
+  nUniqueFeatures = sapply(object$features, function(vec) length(unique(vec)))
   stats$poly = list(tableDegrees = as.data.frame(table(degree)),
                     tableInteraction = as.data.frame(table(nUniqueFeatures)))
   stats$rS = max(rawSummary$rS)
-  stats$nFeaturesTested = length(unique(rai_out$summary[ ,"feature"]))
+  stats$nFeaturesTested = length(unique(object$summary[ ,"feature"]))
   list(plot_rS  = plot_ntest_rS(rawSummary),
        plot_wealth = plot_ntest_wealth(rawSummary),
        experts  = expertSum,
