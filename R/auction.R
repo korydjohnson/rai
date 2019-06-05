@@ -29,13 +29,12 @@
 #' @param omega return from rejecting a test in Alpha-Investing.
 #' @param reuse logical. Should repeated tests of the same covariate be
 #'   considered a test of the same hypothsis? Reusing wealth isn't implemented
-#'   for RAI or RAIplus (effect is negligible)
+#'   for RAI or RAIplus (effect is negligible).
 #' @param nMaxTest maximum number of tests
 #' @param verbose logical. Should auction output be prited?
 #' @param save logical. Should the auction results be saved? If TRUE, returns a
 #'   summary matrix.
-#' @param indices list of columns of theData used in an interaction.
-#' @param res residuals from current model
+#' @param res residuals from current model.
 #' @param X covariates in the current model.
 #' @param x covariate being tested for addition into the model.
 #' @param TSS total sum of squares; considering current residuals to be the response.
@@ -43,29 +42,12 @@
 #'   The default is .lm.fit, but other alternatives are possible. Note that it
 #'   does not use formula notation as this is costly. Another recommended option is
 #'   fastLmPure from RcppEigen or related packages.
-#' @param mat data matrix for interaction feature.
 #' @return A list which includes the following components: \item{formula}{final
 #'   model formula.} \item{y}{response.} \item{X}{model matrix from final
-#'   model.} \item{experts}{list of experts.} \item{theModelFeatures}{list of
-#'   feature names in the final model.} \item{options}{options given to RAI:
-#'   algorithm, searchType, poly}
+#'   model.} \item{features}{list of interactions included in formula.}
+#'   \item{summary}{included if save=T; matrix where each row contains the
+#'   summary information of a single test.}
 
-featureName = function(indices, theData) {
-  paste(sort(colnames(theData)[indices]), collapse="_")
-}
-
-#' @name Auction
-rowProd = function(mat) {
-  out = mat[ , 1, drop=F]
-  if (ncol(mat) > 1) {
-    for (col in 2:ncol(mat)) {
-      out = out*mat[ , col, drop=F]
-    }
-  }
-  out
-}
-
-#' @name Auction
 vif = function(res, y, X, x, n, p, m, TSS, lmFit) {
   # reg = .lm.fit(cbind(X, x), res)  # avoiding
   beta_yAdj = c(crossprod(x, res)/crossprod(x-mean(x)))
@@ -81,10 +63,27 @@ vif = function(res, y, X, x, n, p, m, TSS, lmFit) {
   xRes = as.matrix(lmFit(X, x)$residuals)
   rho   = c(crossprod(x-mean(x))/crossprod(xRes))
   if (abs(max(x) - min(x)) < .Machine$double.eps || rho > 10^2) {
-    list(rho = 10^2, rS = c(1 - crossprod(res) / TSS))  # rS still estimated
+    rho = 10^2
+    rS = c(1 - crossprod(res) / TSS)  # rS still estimated, but irrelevant
   } else {
-    list(rho = rho, rS = c(1 - crossprod(res-xRes*c(beta_yAdj*rho)) / TSS))
+    rS = c(1 - crossprod(res-xRes*c(beta_yAdj*rho)) / TSS)
   }
+
+  list(rho = rho, rS = rS)
+}
+
+featureName = function(indices, theData) {
+  paste0("I(", paste(sort(colnames(theData)[indices]), collapse="*"), ")")
+}
+
+rowProd = function(mat) {
+  out = mat[ , 1, drop=F]
+  if (ncol(mat) > 1) {
+    for (col in 2:ncol(mat)) {
+      out = out*mat[ , col, drop=F]
+    }
+  }
+  out
 }
 
 #' @name Auction
@@ -105,6 +104,13 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
   epochsReady = sapply(experts, function(e) e$state()$epoch)
   while (ntest <= nMaxTest) {
     # max: select from end of experts; depth/breath builds list differently
+    if (verbose) {
+      cat("Test", ntest, "total wealth", experts[[1]]$state()$wealth,
+          "nExperts", length(experts), "\n  epochsReady", epochsReady, "\n")
+      if (alg == "raiPlus") {
+        cat("  nFinishedEp", nFinishedEp, "nFinishedPass", nFinishedPass, "\n")
+      }
+    }
     eIndex = max(which(epochsReady == min(epochsReady, na.rm=T)))
     iExpert = experts[[eIndex]]
     xIndex  = unlist(iExpert$feature())  # list or vector
@@ -114,9 +120,8 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
       vifOut = vif(res, y, X, x, n, p, m, TSS, lmFit)
     }
     state = iExpert$state()
-    if(verbose) {
-      cat("Test", ntest, "total wealth", state$wealth,
-          "\n  expert", iExpert$name, "epoch", state$epoch,
+    if (verbose) {
+      cat("  expert", iExpert$name, "epoch", state$epoch,
           "\n  bid", state$bid, "cost", state$cost,
           "\n  tests", paste(xIndex, collapse="_"), ":\n")
       if (state$cost > state$wealth) { cat("**Insufficient wealth.") }
@@ -124,8 +129,13 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
     if (state$cost > state$wealth) { break }
 
     # compute p-value, conduct test, implications of test ------------------
-    # look for % reduction in remaining ESS; sub vif rS can be < rS
+    # look for % reduction in remaining ESS
     rChange = max(0, (vifOut$rS - rS)/(1-rS))
+    if (rChange > state$rCrit && m < Inf) {  # retest with full data
+      x = rowProd(theData[ , xIndex, drop=F])  # feature
+      vifOut = vif(res, y, X, x, n, p, m=Inf, TSS, lmFit)
+      rChange = max(0, (vifOut$rS - rS)/(1-rS))
+    }
     if (vifOut$rho > 20) {  # could make 20 a user chosen parameter
       if (verbose) {
         cat("**Variable", paste(xIndex, collapse="_"),
@@ -147,26 +157,29 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
       X = cbind(X, x)  # add covariate and index to features
       p = p+1
       theModelFeatures[[p]] = xIndex
-      # res = .lm.fit(X, y)$residuals
       res = as.matrix(lmFit(X, y)$residuals)
       cpRes = c(crossprod(res))
       if (sigma != "ind") {iExpert$ud_resid(cpRes, sqrt(cpRes/(n-p-1)), n-p-1)}
       rS = 1 - cpRes/TSS
       lapply(experts, function(e) e$newModel(alg))
-      if (alg=="raiPlus") { nFinishedEp = 0 }
       if (poly) {  # new expert for interactions with rejected feature
         newExp = makeScavengerExpert(gWealth, theModelFeatures,
                                      paste(sort(xIndex), collapse="_"))
         if (searchType == "breadth") {
           experts = list(list(newExp), experts)
+          epochsReady = c(1, epochsReady)
           eIndex = eIndex + 1
         } else {  # depth
           experts = list(experts, list(newExp))
+          epochsReady = c(epochsReady, 1)
         }
         experts = unlist(experts, recursive=F)
-        epochsReady = sapply(experts, function(e) {
-          ifelse(e$finishedPass(), NA, e$state()$epoch)  # restarted ep
-        })
+        if (alg == "raiPlus") {  # finishedEp can set epochsReady=NA; so reset
+          nFinishedEp = 0
+          epochsReady = sapply(experts, function(e) {
+            ifelse(e$finishedEp() || e$finishedPass(), NA, e$state()$epoch)
+          })
+        }
       }
     }
 
@@ -202,7 +215,7 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
       } else {  # raiPlus & !(finishedEp & behind) -> update counters
         if (iExpert$finishedPass()) { nFinishedPass = nFinishedPass + 1 }
         if (iExpert$finishedEp()) { nFinishedEp = nFinishedEp + 1 }
-        epochsReady[eIndex] = NA  # one of previous conditions satisfied
+        epochsReady[eIndex] = NA  # one of previous conditions must be satisfied
       }
     }
 
@@ -229,15 +242,15 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
 
   # prepare output -----------------------------------------
   colnames(y) = "y"
-  if (ncol(X)==0) {
+  if (ncol(X) == 0) {
+    colnames(X) = "1"
     f = "y ~ 1"
   } else {
     colnames(X) = c("1", mapply(featureName,
                                 theModelFeatures, MoreArgs = list(theData)))
-    f = paste("y ~", paste(colnames(X),collapse="+"))
+    f = paste("y ~", paste(colnames(X), collapse="+"))
   }
-  out = list(formula=f, y=y,  X=X, features=theModelFeatures,
-             options = list(alg=alg, searchType=searchType, poly=poly))
+  out = list(formula=f, y=y,  X=X, features=theModelFeatures)
   if (save) { out$summary = do.call(rbind, results)}
 
   out

@@ -24,7 +24,6 @@
 #'   the model.
 #' @return A closure containing a list of functions.
 
-#' @export
 makeExpert = function (bidder, constructor) {
   nFailedTests  = 0  # n failed tests in current model
   expert = unlist(list(bidder, constructor), recursive = F)
@@ -63,7 +62,6 @@ makeExpert = function (bidder, constructor) {
 }
 
 #' @name Experts
-#' @export
 makeStepwiseExpert = function(gWealth, ncolumns) {
   expert = makeExpert(
     makeStepwiseBidder(gWealth),
@@ -72,7 +70,6 @@ makeStepwiseExpert = function(gWealth, ncolumns) {
 }
 
 #' @name Experts
-#' @export
 makeScavengerExpert = function (gWealth, theModelFeatures, name) {
   makeExpert(
     makeStepwiseBidder(gWealth),

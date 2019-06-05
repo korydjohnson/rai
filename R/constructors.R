@@ -17,7 +17,6 @@
 #' @param name name of the base feature with which to create interactions.
 #' @return A closure containing a list of functions.
 
-#' @export
 makeRawSource = function(ncolumns) {
   activeColumns = 0:ncolumns
   position      = ncolumns  # position in list, work back to front
@@ -57,7 +56,6 @@ makeRawSource = function(ncolumns) {
 }
 
 #' @name Feature-Constructors
-#' @export
 makeLocalScavenger = function(theModelFeatures, name) {
   baseFeature = theModelFeatures[[length(theModelFeatures)]]
   raw = makeRawSource(length(theModelFeatures))
