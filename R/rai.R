@@ -4,7 +4,7 @@
 #' @title Main function for Revisiting Alpha-Investing (RAI) regression.
 #'
 #' @description The function rai is a wrapper that creates and manages the
-#'   inputs and ouptuts of the \code{\link{runAuction}} function. Using poly=F
+#'   inputs and outputs of the \code{\link{runAuction}} function. Using poly=F
 #'   is an efficient and statistically valid way to run and terminate stepwise
 #'   regression. The function prepareData is provided in order to make
 #'   generating predictions on test data easier: it is used by rai to process
@@ -48,13 +48,13 @@
 #'   sigma="ind".
 #' @param omega return from rejecting a test in Alpha-Investing (<= alpha).
 #' @param reuse logical. Should repeated tests of the same covariate be
-#'   considered a test of the same hypothsis? reusing wealth isn't implemented
+#'   considered a test of the same hypothesis? reusing wealth isn't implemented
 #'   for RAI or RAIplus as the effect is negligible.
 #' @param maxTest maximum number of tests.
-#' @param verbose logical. Should auction output be prited?
+#' @param verbose logical. Should auction output be printed?
 #' @param save logical. Should the auction results be saved? If TRUE, returns a
 #'   summary matrix.
-#' @param lmFit The core fuction that will be used to estimate linear model
+#' @param lmFit The core function that will be used to estimate linear model
 #'   fits. The default is .lm.fit, but other alternatives are possible. Note
 #'   that it does not use formula notation as this is costly. Another
 #'   recommended option is fastLmPure from RcppEigen or related packages.
@@ -65,16 +65,14 @@
 #'   \item{summary}{list of feature names in the final model.} \item{time}{run
 #'   time.} \item{options}{options given to RAI: alg, searchType, poly, r.}
 #'   \item{model}{linear model object using selected model} A summary method is
-#'   provided in order to generate futher output and graphics. This summary
+#'   provided in order to generate further output and graphics. This summary
 #'   method requires the tidyverse package.
 #' @examples
 #'   data("CO2")
 #'   theResponse = CO2$uptake
 #'   theData = CO2[ ,-5]
 #'   rai_out = rai(theData, theResponse)
-#'   summary(rai_out)
-#'   raiPlus_out = rai(theData, theResponse, alg="raiPlus")
-#'   summary(raiPlus_out)
+#'   summary(rai_out)  # summary information including graphs
 #' @importFrom stats lm model.matrix pt qt resid var sd .lm.fit
 
 #' @export

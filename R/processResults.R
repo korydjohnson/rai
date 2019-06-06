@@ -14,7 +14,7 @@
 #'   of the change in r.squared over time (number of tests conducted).}
 #'   \item{plot_wealth}{plot of the change in r.squared over time (number of
 #'   tests conducted).} \item{experts}{summary of expert performance: number of
-#'   features, number of rejections, order in which they were addedto the expert
+#'   features, number of rejections, order in which they were added to the expert
 #'   list.} \item{tests}{table of number of times features were tested: how many
 #'   features tested k times; which expert(s) conducted tests.} \item{epochs}{in
 #'   which epochs were tests rejected and the corresponding rejection
@@ -27,10 +27,8 @@
 #'   data("CO2")
 #'   theResponse = CO2$uptake
 #'   theData = CO2[ ,-5]
-#'   object = rai(theData, theResponse)
-#'   summary(object)
-#'   raiPlus_out = rai(theData, theResponse, alg="raiPlus")
-#'   summary(raiPlus_out)
+#'   rai_out = rai(theData, theResponse)
+#'   summary(rai_out)  # summary information including graphs
 
 #' @importFrom dplyr as_tibble %>% mutate_all summarise group_by mutate arrange
 #' @importFrom dplyr ungroup pull select filter desc n

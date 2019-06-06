@@ -1,0 +1,67 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+# rai
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+## Overview
+
+rai provides a modified implementation of stepwise regression that greedily searches 
+the space of interactions among features in order to build polynomial regression models.
+Furthermore, the hypothesis tests conducted are valid post model selection
+due to the use of a revisiting procedure that implements an alpha-investing
+rule. As a result, the set of rejected sequential hypotheses is proven to 
+control the marginal false discover rate. When not searching for polynomials,
+the package provides a statistically valid algorithm
+to run and terminate stepwise regression.
+    
+For more information, see the corresponding paper: [Revisiting Alpha-Investing: Conditionally Valid Stepwise Regression](https://arxiv.org/abs/1510.06322).
+
+## Installation
+
+You can install the released version of rai from [CRAN](https://CRAN.R-project.org) with:
+
+``` r
+install.packages("rai")
+```
+
+And the development version from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("korydjohnson/rai")
+```
+
+## Usage
+
+```{r example}
+library(rai)
+data("CO2")
+theResponse = CO2$uptake
+theData = CO2[ ,-5]
+rai_out = rai(theData, theResponse)
+```
+
+The returned object includes a linear model object of the identified model:
+```{r}
+summary(rai_out$model)
+```
+
+You can view a summary of the series of tests conducted by rai and the results 
+of those tests by calling `summary` on the returned object:
+```{r}
+summary(rai_out)
+```

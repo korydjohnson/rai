@@ -29,7 +29,7 @@ factor estimate of r.squared.}
 
 \item{TSS}{total sum of squares; considering current residuals to be the response.}
 
-\item{lmFit}{The core fuction that will be used to estimate linear model fits.
+\item{lmFit}{The core function that will be used to estimate linear model fits.
 The default is .lm.fit, but other alternatives are possible. Note that it
 does not use formula notation as this is costly. Another recommended option is
 fastLmPure from RcppEigen or related packages.}
@@ -55,12 +55,12 @@ higher-order polynomials. One of "breadth" (more base features) or "depth"
 \item{omega}{return from rejecting a test in Alpha-Investing.}
 
 \item{reuse}{logical. Should repeated tests of the same covariate be
-considered a test of the same hypothsis? Reusing wealth isn't implemented
+considered a test of the same hypothesis? Reusing wealth isn't implemented
 for RAI or RAIplus (effect is negligible).}
 
 \item{nMaxTest}{maximum number of tests}
 
-\item{verbose}{logical. Should auction output be prited?}
+\item{verbose}{logical. Should auction output be printed?}
 
 \item{save}{logical. Should the auction results be saved? If TRUE, returns a
 summary matrix.}
@@ -75,7 +75,8 @@ A list which includes the following components: \item{formula}{final
 \description{
 runAuction is the workhorse of the rai package: it takes an
   initial expert list and runs the Revisiting Alpha-Investing algorithm to
-  greedily fit (optional) polnomials to data. The term "auction" is the
+  greedily fit (optional) polynomials and interactions to data.
+  The term "auction" is the
   result of multiple experts bidding to perform the test which determines
   stepwise ordering. This function is not intended to be called directly, but
   through \code{\link{rai}}.

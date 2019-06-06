@@ -21,7 +21,7 @@
 #' @param TSS total sum of squares of the response.
 #' @param p number of covariates (only used when alg == "RH").
 #' @param reuse logical. Should repeated tests of the same covariate be
-#'   considered a test of the same hypothsis?
+#'   considered a test of the same hypothesis?
 #' @param rmse initial (or independent) estimate of residual standard error
 #' @param df degrees of freedom of rmse.
 #' @param gWealth a global wealth object; output of gWealthStep.

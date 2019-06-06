@@ -2,13 +2,18 @@ Package: rai
 Type: Package
 Title: Revisiting-Alpha-Investing for Polynomial Regression
 Version: 1.0.0
-Authors@R: person("Kory", "Johnson", email = "korydjohnson@gmail.com",
-  role = c("aut", "cre"))
-Description: Tailors stepwise regression to adaptively search for polynomials.
-    Furthermore the hypothesis tests conducted are valid post model selection
+Authors@R: c(
+    person("Kory D.", "Johnson", email = "korydjohnson@gmail.com", role = c("aut", "cre")),
+    person("Robert A.", "Stine", email = "stine@wharton.upenn.edu", role = "aut")
+    )
+Description: A modified implementation of stepwise regression that greedily searches 
+    the space of interactions among features in order to build polynomial regression models.
+    Furthermore, the hypothesis tests conducted are valid post model selection
     due to the use of a revisiting procedure that implements an alpha-investing
     rule. As a result, the set of rejected sequential hypotheses is proven to 
-    control the marginal false discover rate (mFDR).
+    control the marginal false discover rate. When not searching for polynomials,
+    the package provides a statistically valid algorithm
+    to run and terminate stepwise regression.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

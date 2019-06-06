@@ -5,7 +5,8 @@
 #'
 #' @description runAuction is the workhorse of the rai package: it takes an
 #'   initial expert list and runs the Revisiting Alpha-Investing algorithm to
-#'   greedily fit (optional) polnomials to data. The term "auction" is the
+#'   greedily fit (optional) polynomials and interactions to data.
+#'   The term "auction" is the
 #'   result of multiple experts bidding to perform the test which determines
 #'   stepwise ordering. This function is not intended to be called directly, but
 #'   through \code{\link{rai}}.
@@ -28,17 +29,17 @@
 #'   factor estimate of r.squared.
 #' @param omega return from rejecting a test in Alpha-Investing.
 #' @param reuse logical. Should repeated tests of the same covariate be
-#'   considered a test of the same hypothsis? Reusing wealth isn't implemented
+#'   considered a test of the same hypothesis? Reusing wealth isn't implemented
 #'   for RAI or RAIplus (effect is negligible).
 #' @param nMaxTest maximum number of tests
-#' @param verbose logical. Should auction output be prited?
+#' @param verbose logical. Should auction output be printed?
 #' @param save logical. Should the auction results be saved? If TRUE, returns a
 #'   summary matrix.
 #' @param res residuals from current model.
 #' @param X covariates in the current model.
 #' @param x covariate being tested for addition into the model.
 #' @param TSS total sum of squares; considering current residuals to be the response.
-#' @param lmFit The core fuction that will be used to estimate linear model fits.
+#' @param lmFit The core function that will be used to estimate linear model fits.
 #'   The default is .lm.fit, but other alternatives are possible. Note that it
 #'   does not use formula notation as this is costly. Another recommended option is
 #'   fastLmPure from RcppEigen or related packages.
@@ -61,7 +62,7 @@ vif = function(res, y, X, x, n, p, m, TSS, lmFit) {
   }
   # xRes  = .lm.fit(X, x)$residuals
   xRes = as.matrix(lmFit(X, x)$residuals)
-  rho   = c(crossprod(x-mean(x))/crossprod(xRes))
+  rho = c(crossprod(x-mean(x))/crossprod(xRes))
   if (abs(max(x) - min(x)) < .Machine$double.eps || rho > 10^2) {
     rho = 10^2
     rS = c(1 - crossprod(res) / TSS)  # rS still estimated, but irrelevant

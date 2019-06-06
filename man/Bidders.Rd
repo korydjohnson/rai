@@ -24,7 +24,7 @@ epoch.}
 \item{p}{number of covariates (only used when alg == "RH").}
 
 \item{reuse}{logical. Should repeated tests of the same covariate be
-considered a test of the same hypothsis?}
+considered a test of the same hypothesis?}
 
 \item{rmse}{initial (or independent) estimate of residual standard error}
 
