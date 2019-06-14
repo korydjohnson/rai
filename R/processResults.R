@@ -9,7 +9,9 @@
 #' \code{\link{rai}} function.
 #' @param rawSum processed version of rai summary stored as a tibble with
 #'   correct column parsing.
-#' @param ... additional arguments affecting the summary produced.
+#' @param newdata an optional data frame in which to look for variables with
+#'   which to predict. If omitted, the fitted values are used.
+#' @param ... additional arguments affecting the summary or predict methods.
 #' @return A list which includes the following components: \item{plot_rS}{plot
 #'   of the change in r.squared over time (number of tests conducted).}
 #'   \item{plot_wealth}{plot of the change in r.squared over time (number of
@@ -21,7 +23,8 @@
 #'   thresholds.} \item{stats}{summary statistics: number of tests, number of
 #'   epochs, bound on percentage reduction in ESS by adding a single feature,
 #'   number of passes through to features, final r.squared, cost of raiPlus (0
-#'   for rai).}\item{options}{options given to RAI: algorithm, searchType, r, poly.}
+#'   for rai).}\item{options}{options given to RAI: algorithm, searchType, poly,
+#'   startDegree, r.}
 
 #' @examples
 #'   data("CO2")
@@ -29,12 +32,14 @@
 #'   theData = CO2[ ,-5]
 #'   rai_out = rai(theData, theResponse)
 #'   summary(rai_out)  # summary information including graphs
+#'   predict(rai_out)  # fitted values from selected model
 
 #' @importFrom dplyr as_tibble %>% mutate_all summarise group_by mutate arrange
 #' @importFrom dplyr ungroup pull select filter desc n
 #' @importFrom readr parse_guess
 #' @importFrom rlang .data
 #' @importFrom ggplot2 ggplot geom_line aes_string scale_y_continuous labs
+#' @importFrom stats predict
 
 plot_ntest_rS = function(rawSum) {
   ggplot(rawSum) +
@@ -50,6 +55,17 @@ plot_ntest_wealth = function(rawSum) {
     geom_line(aes_string("ntest", "wealth")) +
     labs(title =  paste("Change in Wealth"),
          x = "Number of Tests", y = "Wealth")
+}
+
+#' @name ProcessRAI
+#' @export
+predict.rai = function(object, newdata=NULL, ...) {
+  if (!is.null(newdata)) {
+    newdata = prepareData(newdata, object$options$poly, object$options$startDeg)
+    predict(object$model, as.data.frame(newdata), ...)
+  } else {
+    predict(object$model, ...)
+  }
 }
 
 #' @name ProcessRAI

@@ -46,7 +46,7 @@
 #' @return A list which includes the following components: \item{formula}{final
 #'   model formula.} \item{y}{response.} \item{X}{model matrix from final
 #'   model.} \item{features}{list of interactions included in formula.}
-#'   \item{summary}{included if save=T; matrix where each row contains the
+#'   \item{summary}{included if save=TRUE; matrix where each row contains the
 #'   summary information of a single test.}
 
 vif = function(res, y, X, x, n, p, m, TSS, lmFit) {
@@ -54,10 +54,10 @@ vif = function(res, y, X, x, n, p, m, TSS, lmFit) {
   beta_yAdj = c(crossprod(x, res)/crossprod(x-mean(x)))
   if (m + p < n) {  # subsample for new x
     sam = sample.int(n, m+p)
-    x = x[sam, 1, drop=F]
-    X = X[sam,  , drop=F]
-    res = res[sam, 1, drop=F]
-    y = y[sam, 1, drop=F]
+    x = x[sam, 1, drop=FALSE]
+    X = X[sam,  , drop=FALSE]
+    res = res[sam, 1, drop=FALSE]
+    y = y[sam, 1, drop=FALSE]
     TSS = c(crossprod(y-mean(y)))
   }
   # xRes  = .lm.fit(X, x)$residuals
@@ -78,10 +78,10 @@ featureName = function(indices, theData) {
 }
 
 rowProd = function(mat) {
-  out = mat[ , 1, drop=F]
+  out = mat[ , 1, drop=FALSE]
   if (ncol(mat) > 1) {
     for (col in 2:ncol(mat)) {
-      out = out*mat[ , col, drop=F]
+      out = out*mat[ , col, drop=FALSE]
     }
   }
   out
@@ -112,12 +112,12 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
         cat("  nFinishedEp", nFinishedEp, "nFinishedPass", nFinishedPass, "\n")
       }
     }
-    eIndex = max(which(epochsReady == min(epochsReady, na.rm=T)))
+    eIndex = max(which(epochsReady == min(epochsReady, na.rm=TRUE)))
     iExpert = experts[[eIndex]]
     xIndex  = unlist(iExpert$feature())  # list or vector
     vifOut = iExpert$get_vif()
     if (any(is.na(vifOut))) {
-      x = rowProd(theData[ , xIndex, drop=F])  # feature
+      x = rowProd(theData[ , xIndex, drop=FALSE])  # feature
       vifOut = vif(res, y, X, x, n, p, m, TSS, lmFit)
     }
     state = iExpert$state()
@@ -133,7 +133,7 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
     # look for % reduction in remaining ESS
     rChange = max(0, (vifOut$rS - rS)/(1-rS))
     if (rChange > state$rCrit && m < Inf) {  # retest with full data
-      x = rowProd(theData[ , xIndex, drop=F])  # feature
+      x = rowProd(theData[ , xIndex, drop=FALSE])  # feature
       vifOut = vif(res, y, X, x, n, p, m=Inf, TSS, lmFit)
       rChange = max(0, (vifOut$rS - rS)/(1-rS))
     }
@@ -153,7 +153,7 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
       }
       iExpert$rejTest(omega)  # add to wealth, don't test covariate again
       if (!all(is.na(iExpert$get_vif()))) {  # don't have x when used stored info
-        x = rowProd(theData[ , xIndex, drop=F])  # feature
+        x = rowProd(theData[ , xIndex, drop=FALSE])  # feature
       }
       X = cbind(X, x)  # add covariate and index to features
       p = p+1
@@ -174,7 +174,7 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
           experts = list(experts, list(newExp))
           epochsReady = c(epochsReady, 1)
         }
-        experts = unlist(experts, recursive=F)
+        experts = unlist(experts, recursive=FALSE)
         if (alg == "raiPlus") {  # finishedEp can set epochsReady=NA; so reset
           nFinishedEp = 0
           epochsReady = sapply(experts, function(e) {
@@ -206,9 +206,12 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
       experts[[eIndex]] = NULL
       epochsReady = epochsReady[-eIndex]
       eIndex = NULL
-      if(!length(experts)) { cat("No active experts at", ntest+1, "\n"); break }
+      if(!length(experts) && verbose) {
+        cat("No active experts at", ntest+1, "\n")
+        break
+      }
     } else if (iExpert$finishedPass() || iExpert$finishedEp()) {  # must update
-      behind = iExpert$state()$epoch < max(epochsReady, na.rm = T)
+      behind = iExpert$state()$epoch < max(epochsReady, na.rm = TRUE)
       if (alg != "raiPlus" || (iExpert$finishedEp() && behind)) {
         if (iExpert$finishedPass()) { iExpert$ud_pass() }
         iExpert$newEpoch(1)

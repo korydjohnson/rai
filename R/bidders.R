@@ -74,7 +74,7 @@ makeStepwiseBidder = function(gWealth) {
                 list(epoch = epoch,
                      bid   = bid,
                      cost  = cost,
-                     rCrit = rCrit)), recursive = F)
+                     rCrit = rCrit)), recursive = FALSE)
   }
   bidder$ud_bidder = function(delta=0) {
     epoch <<- epoch + delta

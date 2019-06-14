@@ -4,12 +4,15 @@
 \alias{ProcessRAI}
 \alias{plot_ntest_rS}
 \alias{plot_ntest_wealth}
+\alias{predict.rai}
 \alias{summary.rai}
 \title{Summarising RAI Output}
 \usage{
 plot_ntest_rS(rawSum)
 
 plot_ntest_wealth(rawSum)
+
+\method{predict}{rai}(object, newdata = NULL, ...)
 
 \method{summary}{rai}(object, ...)
 }
@@ -20,7 +23,10 @@ correct column parsing.}
 \item{object}{an object of class rai; expected to be the list output from the
 \code{\link{rai}} function.}
 
-\item{...}{additional arguments affecting the summary produced.}
+\item{newdata}{an optional data frame in which to look for variables with
+which to predict. If omitted, the fitted values are used.}
+
+\item{...}{additional arguments affecting the summary or predict methods.}
 }
 \value{
 A list which includes the following components: \item{plot_rS}{plot
@@ -34,7 +40,8 @@ A list which includes the following components: \item{plot_rS}{plot
   thresholds.} \item{stats}{summary statistics: number of tests, number of
   epochs, bound on percentage reduction in ESS by adding a single feature,
   number of passes through to features, final r.squared, cost of raiPlus (0
-  for rai).}\item{options}{options given to RAI: algorithm, searchType, r, poly.}
+  for rai).}\item{options}{options given to RAI: algorithm, searchType, poly,
+  startDegree, r.}
 }
 \description{
 Processes the output from the \code{\link{rai}} function.
@@ -46,4 +53,5 @@ Processes the output from the \code{\link{rai}} function.
   theData = CO2[ ,-5]
   rai_out = rai(theData, theResponse)
   summary(rai_out)  # summary information including graphs
+  predict(rai_out)  # fitted values from selected model
 }

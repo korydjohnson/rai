@@ -26,13 +26,13 @@
 
 makeExpert = function (bidder, constructor) {
   nFailedTests  = 0  # n failed tests in current model
-  expert = unlist(list(bidder, constructor), recursive = F)
+  expert = unlist(list(bidder, constructor), recursive = FALSE)
   expert[which(names(expert)=="state")] = NULL  # repeated names
   expert$name = paste0("S", constructor$name)
 
   # New Functions ----------------------------------------------
   expert$state = function() {
-    unlist(recursive=F, list(
+    unlist(recursive=FALSE, list(
       bidder$state(),
       constructor$state(),
       nfailed = nFailedTests

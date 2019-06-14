@@ -69,7 +69,7 @@ summary matrix.}
 A list which includes the following components: \item{formula}{final
   model formula.} \item{y}{response.} \item{X}{model matrix from final
   model.} \item{features}{list of interactions included in formula.}
-  \item{summary}{included if save=T; matrix where each row contains the
+  \item{summary}{included if save=TRUE; matrix where each row contains the
   summary information of a single test.}
 }
 \description{

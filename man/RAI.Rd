@@ -7,20 +7,18 @@
 \alias{rai}
 \title{Main function for Revisiting Alpha-Investing (RAI) regression.}
 \usage{
-prepareData(theData, theResponse, poly = T, startDeg = 1)
+prepareData(theData, poly = TRUE, startDeg = 1)
 
 is.rai(x)
 
 rai(theData, theResponse, alpha = 0.1, alg = "rai", r = 0.8,
   poly = alg != "RH", startDeg = 1, searchType = "breadth",
   m = 500, sigma = "step", rmse = NA, df = NA, omega = alpha,
-  reuse = (alg == "RH"), maxTest = Inf, verbose = F, save = T,
-  lmFit = .lm.fit)
+  reuse = (alg == "RH"), maxTest = Inf, verbose = FALSE,
+  save = TRUE, lmFit = .lm.fit)
 }
 \arguments{
 \item{theData}{matrix of covariates.}
-
-\item{theResponse}{response vector or single column matrix.}
 
 \item{poly}{logical. Should the algorithm look for higher-order polynomials?}
 
@@ -31,6 +29,8 @@ roots. This alleviates some problems with high-dimensional polynomials as a
 original scale.}
 
 \item{x}{an R object.}
+
+\item{theResponse}{response vector or single column matrix.}
 
 \item{alpha}{level of procedure.}
 
@@ -85,9 +85,9 @@ A list which includes the following components: \item{formula}{final
 }
 \description{
 The function rai is a wrapper that creates and manages the
-  inputs and outputs of the \code{\link{runAuction}} function. Using poly=F
-  is an efficient and statistically valid way to run and terminate stepwise
-  regression. The function prepareData is provided in order to make
+  inputs and outputs of the \code{\link{runAuction}} function. Using
+  poly=FALSE is an efficient and statistically valid way to run and terminate
+  stepwise regression. The function prepareData is provided in order to make
   generating predictions on test data easier: it is used by rai to process
   the data prior to running, and is necessary to make column names and
   information match in order to use the model object returned by rai.

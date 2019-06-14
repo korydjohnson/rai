@@ -40,7 +40,7 @@ makeRawSource = function(ncolumns) {
     reset_vif = function() { vifSaved <<- as.list(rep(NA, ncolumns)) },
     feature  = function() {
       prevPosition <<- position
-      position     <<- max(activeColumns[activeColumns<position],na.rm=T)
+      position     <<- max(activeColumns[activeColumns<position], na.rm=TRUE)
       return(prevPosition)
     },
     # +1 corrects for 0 based index. Position is which column, not location in vector
@@ -49,7 +49,7 @@ makeRawSource = function(ncolumns) {
       nactive <<- nactive-1
     },
     ud_pass = function() {  # move to beginning of list of features
-      position <<- max(activeColumns, na.rm=T)
+      position <<- max(activeColumns, na.rm=TRUE)
       prevPosition <<- NA
     }
   )
@@ -63,7 +63,7 @@ makeLocalScavenger = function(theModelFeatures, name) {
   e = environment(raw$state)
   raw$feature = function() {  # don't need deep assignment as given environment
     e$prevPosition = e$position
-    e$position     = max(e$activeColumns[e$activeColumns<e$position], na.rm=T)
+    e$position     = max(e$activeColumns[e$activeColumns<e$position], na.rm=TRUE)
     return(list(theModelFeatures[[e$prevPosition]], baseFeature))
   }
 

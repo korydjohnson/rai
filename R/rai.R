@@ -4,9 +4,9 @@
 #' @title Main function for Revisiting Alpha-Investing (RAI) regression.
 #'
 #' @description The function rai is a wrapper that creates and manages the
-#'   inputs and outputs of the \code{\link{runAuction}} function. Using poly=F
-#'   is an efficient and statistically valid way to run and terminate stepwise
-#'   regression. The function prepareData is provided in order to make
+#'   inputs and outputs of the \code{\link{runAuction}} function. Using
+#'   poly=FALSE is an efficient and statistically valid way to run and terminate
+#'   stepwise regression. The function prepareData is provided in order to make
 #'   generating predictions on test data easier: it is used by rai to process
 #'   the data prior to running, and is necessary to make column names and
 #'   information match in order to use the model object returned by rai.
@@ -76,29 +76,24 @@
 #' @importFrom stats lm model.matrix pt qt resid var sd .lm.fit
 
 #' @export
-prepareData = function(theData, theResponse, poly=T, startDeg=1) {
-  if (any(is.na(theData)) || any(is.na(theResponse))) {
+prepareData = function(theData, poly=TRUE, startDeg=1) {
+  if (any(is.na(theData))) {
     warning("Missing values deteted; applying default conversions and exclusions.
             See documentation for details or remove missing values manually.")
     theData = modMissingData(as.data.frame(theData))
-    missResponse = is.na(theResponse)
-    theData = theData[!missResponse, ]
-    theResponse = theResponse[!missResponse]
   }
-
   theData = model.matrix(~. - 1, data=as.data.frame(theData))
   colnames(theData) = make.names(colnames(theData))
   if (poly && startDeg!=1) {
     theData = apply(theData, 2, function(col) col^startDeg)
   }
-  theResponse = as.matrix(theResponse, ncol=1)
-  list(theData = theData, theResponse = theResponse)
+  theData
 }
 
 modMissingCol = function(col) {
   if (is.numeric(col) && length(unique(col)) > 2) {  # numeric
     missing = is.na(col)
-    col[missing] = mean(col, na.rm=T)
+    col[missing] = mean(col, na.rm=TRUE)
     list(col, missing)
   } else {  # categorical
     col[is.na(col)] = "NA"
@@ -127,16 +122,17 @@ is.rai = function(x) inherits(x, "rai")
 #' @export
 rai = function(theData, theResponse, alpha=.1, alg="rai", r=.8, poly=alg!="RH",
                startDeg=1, searchType="breadth", m=500, sigma="step", rmse = NA,
-               df=NA, omega=alpha, reuse=(alg=="RH"), maxTest=Inf, verbose=F,
-               save=T, lmFit = .lm.fit) {
+               df=NA, omega=alpha, reuse=(alg=="RH"), maxTest=Inf, verbose=FALSE,
+               save=TRUE, lmFit = .lm.fit) {
   stopifnot(searchType %in% c("breadth", "depth") ||
               sigma %in% c("ind", "step") ||
               alg %in% c("rai", "raiPlus", "RH"))
   if (poly && alg == "RH") { stop("Cannot do polynomial regression with RH.") }
   if (reuse && alg != "RH") { stop("RAI does not reuse wealth.") }
 
-  dataList = prepareData(theData, theResponse, poly, startDeg)
-  theData = dataList$theData; theResponse = dataList$theResponse
+  missResponse = is.na(theResponse)
+  theResponse = as.matrix(theResponse[!missResponse], ncol=1)
+  theData = prepareData(theData[!missResponse, ], poly, startDeg)
   if (sigma == "ind") {
     stopifnot(is.numeric(rmse) && is.numeric(df))
   } else {
@@ -151,7 +147,8 @@ rai = function(theData, theResponse, alpha=.1, alg="rai", r=.8, poly=alg!="RH",
                       alg, poly, searchType, m, sigma, omega, reuse, maxTest,
                       verbose, save, lmFit)
   aucOut$time = Sys.time() - timeStart
-  aucOut$options = list(alg=alg, searchType=searchType, poly=poly, r=r)
+  aucOut$options = list(alg=alg, searchType=searchType, poly=poly,
+                        startDeg=startDeg, r=r)
   aucOut$model = lm(aucOut$formula, data.frame(y=theResponse, theData))
   class(aucOut) = "rai"
   aucOut
