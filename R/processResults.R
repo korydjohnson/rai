@@ -41,6 +41,7 @@
 #' @importFrom ggplot2 ggplot geom_line aes_string scale_y_continuous labs
 #' @importFrom stats predict
 
+#' @export
 plot_ntest_rS = function(rawSum) {
   ggplot(rawSum) +
     geom_line(aes_string("ntest", "rS")) +
@@ -50,6 +51,7 @@ plot_ntest_rS = function(rawSum) {
 }
 
 #' @name ProcessRAI
+#' @export
 plot_ntest_wealth = function(rawSum) {
   ggplot(rawSum) +
     geom_line(aes_string("ntest", "wealth")) +
@@ -59,12 +61,31 @@ plot_ntest_wealth = function(rawSum) {
 
 #' @name ProcessRAI
 #' @export
-predict.rai = function(object, newdata=NULL, ...) {
+predict.rai = function(object, newdata=NULL, alpha=NULL, omega=NULL,...) {
+  mod = object$model
+  rawSummary = object$summary %>%
+    as_tibble() %>%
+    mutate_all(parse_guess)
+  if (!is.null(alpha)) {
+    if (is.null(omega)) { omega = alpha }
+    if (alpha > as.numeric(object$summary[1, "wealth"])) {
+      stop("Desired alpha is larger than initial wealth.
+      Rerun rai() with larger alpha.")
+    }
+    wealthNew = rawSummary %>%
+      mutate(wealthNew = wealth - object$options$alpha + alpha -
+               cumsum(c(F,rej[-length(rej)]))*(object$options$omega - omega)) %>%
+      pull(wealthNew)
+    lastTest = which.max(wealthNew<0)-1  # -1 b/c *couldn't* conduct that test
+    X = object$X[,1:(sum(rawSummary$rej[1:lastTest]) + 1)]
+    mod = lm(paste("y ~", paste(colnames(X), collapse="+")),
+             data.frame(object$y, object$subData))
+  }
   if (!is.null(newdata)) {
     newdata = prepareData(newdata, object$options$poly, object$options$startDeg)
-    predict(object$model, as.data.frame(newdata), ...)
+    predict(mod, as.data.frame(newdata), ...)
   } else {
-    predict(object$model, ...)
+    predict(mod, ...)
   }
 }
 
@@ -110,6 +131,10 @@ summary.rai = function(object, ...) {
                     tableInteraction = as.data.frame(table(nUniqueFeatures)))
   stats$rS = max(rawSummary$rS)
   stats$nFeaturesTested = length(unique(object$summary[ ,"feature"]))
+  stats$nHypothesisTests = rawSummary %>%
+    select(feature, rS) %>%
+    distinct() %>%
+    nrow()
   list(plot_rS  = plot_ntest_rS(rawSummary),
        plot_wealth = plot_ntest_wealth(rawSummary),
        experts  = expertSum,

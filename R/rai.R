@@ -59,11 +59,13 @@
 #'   that it does not use formula notation as this is costly. Another
 #'   recommended option is fastLmPure from RcppEigen or related packages.
 #' @param x an R object.
-#' @return A list which includes the following components: \item{formula}{final
-#'   model formula.} \item{y}{response.} \item{X}{model matrix from final
-#'   model.} \item{features}{list of interactions included in formula.}
-#'   \item{summary}{list of feature names in the final model.} \item{time}{run
-#'   time.} \item{options}{options given to RAI: alg, searchType, poly, r.}
+#' @return A list which includes the following components: \item{y}{response.}
+#'   \item{X}{model matrix from final model.} \item{formula}{final model
+#'   formula.}  \item{features}{list of interactions included in formula.}
+#'   \item{summary}{if save=TRUE, contains information on each test made by the
+#'   algorithm.} \item{time}{run time.} \item{options}{options given to RAI:
+#'   alg, searchType, poly, r, startDeg, alpha, omega, m.} \item{subData} subset
+#'   of columns from theData that are used in the final model.
 #'   \item{model}{linear model object using selected model} A summary method is
 #'   provided in order to generate further output and graphics. This summary
 #'   method requires the tidyverse package.
@@ -147,9 +149,10 @@ rai = function(theData, theResponse, alpha=.1, alg="rai", r=.8, poly=alg!="RH",
                       alg, poly, searchType, m, sigma, omega, reuse, maxTest,
                       verbose, save, lmFit)
   aucOut$time = Sys.time() - timeStart
-  aucOut$options = list(alg=alg, searchType=searchType, poly=poly,
-                        startDeg=startDeg, r=r)
-  aucOut$model = lm(aucOut$formula, data.frame(y=theResponse, theData))
+  aucOut$options = list(alg=alg, searchType=searchType, poly=poly, r=r,
+                        startDeg=startDeg, alpha=alpha, omega=omega, m=m)
+  aucOut$subData = theData[,sort(unique(unlist(aucOut$features)))]
+  aucOut$model = lm(aucOut$formula, data.frame(y=theResponse, aucOut$subData))
   class(aucOut) = "rai"
   aucOut
 }
