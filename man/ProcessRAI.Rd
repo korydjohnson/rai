@@ -27,6 +27,10 @@ correct column parsing.}
 \item{newdata}{an optional data frame in which to look for variables with
 which to predict. If omitted, the fitted values are used.}
 
+\item{alpha}{level of procedure.}
+
+\item{omega}{return from rejecting a test in Alpha-Investing (<= alpha).}
+
 \item{...}{additional arguments affecting the summary or predict methods.}
 }
 \value{

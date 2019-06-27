@@ -79,11 +79,10 @@ A list which includes the following components: \item{y}{response.}
   formula.}  \item{features}{list of interactions included in formula.}
   \item{summary}{if save=TRUE, contains information on each test made by the
   algorithm.} \item{time}{run time.} \item{options}{options given to RAI:
-  alg, searchType, poly, r, startDeg, alpha, omega, m.} \item{subData} subset
-  of columns from theData that are used in the final model.
-  \item{model}{linear model object using selected model} A summary method is
-  provided in order to generate further output and graphics. This summary
-  method requires the tidyverse package.
+  alg, searchType, poly, r, startDeg, alpha, omega, m.} \item{subData}{subset
+  of columns from theData that are used in the final model.}
+  \item{model}{linear model object using selected model} Summary and predict
+  methods are provided in order to generate further output and graphics.
 }
 \description{
 The function rai is a wrapper that creates and manages the

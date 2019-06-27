@@ -18,3 +18,8 @@ test_that("predict method", {
   expect_identical(predict(rai_out, newdata),
                    predict(rai_out$model, as.data.frame(prepareData(newdata))))
 })
+
+test_that("predict method with alpha", {
+  rai.01 = rai(theData, theResponse, alpha=.01)
+  expect_identical(predict(rai_out, alpha=.01), predict(rai.01))
+})

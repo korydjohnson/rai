@@ -11,6 +11,8 @@
 #'   correct column parsing.
 #' @param newdata an optional data frame in which to look for variables with
 #'   which to predict. If omitted, the fitted values are used.
+#' @param alpha level of procedure.
+#' @param omega return from rejecting a test in Alpha-Investing (<= alpha).
 #' @param ... additional arguments affecting the summary or predict methods.
 #' @return A list which includes the following components: \item{plot_rS}{plot
 #'   of the change in r.squared over time (number of tests conducted).}
@@ -35,7 +37,7 @@
 #'   predict(rai_out)  # fitted values from selected model
 
 #' @importFrom dplyr as_tibble %>% mutate_all summarise group_by mutate arrange
-#' @importFrom dplyr ungroup pull select filter desc n
+#' @importFrom dplyr ungroup pull select filter desc n distinct
 #' @importFrom readr parse_guess
 #' @importFrom rlang .data
 #' @importFrom ggplot2 ggplot geom_line aes_string scale_y_continuous labs
@@ -72,11 +74,12 @@ predict.rai = function(object, newdata=NULL, alpha=NULL, omega=NULL,...) {
       stop("Desired alpha is larger than initial wealth.
       Rerun rai() with larger alpha.")
     }
-    wealthNew = rawSummary %>%
-      mutate(wealthNew = wealth - object$options$alpha + alpha -
-               cumsum(c(F,rej[-length(rej)]))*(object$options$omega - omega)) %>%
-      pull(wealthNew)
-    lastTest = which.max(wealthNew<0)-1  # -1 b/c *couldn't* conduct that test
+    afterBid = rawSummary %>%
+      mutate(wealthNew = .data$wealth - object$options$alpha + alpha -
+               cumsum(c(F,.data$rej[-length(.data$rej)]))*(object$options$omega - omega),
+             afterBid = .data$wealthNew - .data$bid) %>%
+      pull(afterBid)
+    lastTest = which.max(afterBid<0)-1  # -1 b/c *couldn't* conduct that test
     X = object$X[,1:(sum(rawSummary$rej[1:lastTest]) + 1)]
     mod = lm(paste("y ~", paste(colnames(X), collapse="+")),
              data.frame(object$y, object$subData))
@@ -132,7 +135,7 @@ summary.rai = function(object, ...) {
   stats$rS = max(rawSummary$rS)
   stats$nFeaturesTested = length(unique(object$summary[ ,"feature"]))
   stats$nHypothesisTests = rawSummary %>%
-    select(feature, rS) %>%
+    select(.data$feature, .data$rS) %>%
     distinct() %>%
     nrow()
   list(plot_rS  = plot_ntest_rS(rawSummary),
