@@ -37,8 +37,9 @@ original scale.}
 \item{alg}{algorithm can be one of "rai", "raiPlus", or "RH" (Revisiting
 Holm).}
 
-\item{r}{RAI rejects tests which increase R^2 by a factor r^s, where s is the
-epoch.}
+\item{r}{threshold parameter, with 0 < r < 1. RAI rejects tests which
+increase remaining R^2 by a factor r^s, where s is the epoch. Larger values
+of r yield a closer approximation to stepwise regression.}
 
 \item{searchType}{A character string specifying the prioritization of
 higher-order polynomials. One of "breadth" (more base features) or "depth"

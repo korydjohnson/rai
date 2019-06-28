@@ -1,3 +1,12 @@
+## Resubmission
+This is a resubmission. In this version I have:
+
+* Replaced T and F by TRUE and FALSE.
+
+* Used requested format for references.
+
+* Modified the predict method to accept more parameters.
+
 ## Test environments
 * local Ubuntu 18.04 install, R 3.6.0
 * win-builder (release and devel)

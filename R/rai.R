@@ -28,8 +28,9 @@
 #' @param alpha level of procedure.
 #' @param alg algorithm can be one of "rai", "raiPlus", or "RH" (Revisiting
 #'   Holm).
-#' @param r RAI rejects tests which increase R^2 by a factor r^s, where s is the
-#'   epoch.
+#' @param r threshold parameter, with 0 < r < 1. RAI rejects tests which
+#'   increase remaining R^2 by a factor r^s, where s is the epoch. Larger values
+#'   of r yield a closer approximation to stepwise regression.
 #' @param poly logical. Should the algorithm look for higher-order polynomials?
 #' @param startDeg This is the starting degree for polynomial regression. It
 #'   allows the search to start with lower order polynomials such as square

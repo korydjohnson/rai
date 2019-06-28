@@ -8,7 +8,7 @@ Authors@R: c(
     )
 Description: A modified implementation of stepwise regression that greedily searches 
     the space of interactions among features in order to build polynomial regression models.
-    Furthermore, the hypothesis tests conducted are valid post model selection
+    Furthermore, the hypothesis tests conducted are valid-post model selection
     due to the use of a revisiting procedure that implements an alpha-investing
     rule. As a result, the set of rejected sequential hypotheses is proven to 
     control the marginal false discover rate. When not searching for polynomials,
