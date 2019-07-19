@@ -23,7 +23,7 @@
 #'   conversions were used when running rai, then they must be used again with
 #'   prepareData for the test data prior to producing predictions.
 #'
-#' @param theData matrix of covariates.
+#' @param theData matrix or data.frame of covariates.
 #' @param theResponse response vector or single column matrix.
 #' @param alpha level of procedure.
 #' @param alg algorithm can be one of "rai", "raiPlus", or "RH" (Revisiting
@@ -84,7 +84,13 @@ prepareData = function(theData, poly=TRUE, startDeg=1) {
             See documentation for details or remove missing values manually.")
     theData = modMissingData(as.data.frame(theData))
   }
-  theData = model.matrix(~. - 1, data=as.data.frame(theData))
+  if ("data.frame" %in% class(theData)) {
+    if (ncol(theData) > 1000) {
+      warning("Possible protection stack overflow;
+              if so, pass theData as a matrix.")
+    }
+    theData = model.matrix(~. - 1, data=as.data.frame(theData))
+  }
   colnames(theData) = make.names(colnames(theData))
   if (poly && startDeg!=1) {
     theData = apply(theData, 2, function(col) col^startDeg)
@@ -128,7 +134,8 @@ rai = function(theData, theResponse, alpha=.1, alg="rai", r=.8, poly=alg!="RH",
                save=TRUE, lmFit = .lm.fit) {
   stopifnot(searchType %in% c("breadth", "depth") ||
               sigma %in% c("ind", "step") ||
-              alg %in% c("rai", "raiPlus", "RH"))
+              alg %in% c("rai", "raiPlus", "RH") ||
+              any(c("matrix","data.frame") %in% class(theData)))
   if (poly && alg == "RH") { stop("Cannot do polynomial regression with RH.") }
   if (reuse && alg != "RH") { stop("RAI does not reuse wealth.") }
 
