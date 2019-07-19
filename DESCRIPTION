@@ -1,7 +1,7 @@
 Package: rai
 Type: Package
 Title: Revisiting-Alpha-Investing for Polynomial Regression
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: c(
     person("Kory D.", "Johnson", email = "korydjohnson@gmail.com", role = c("aut", "cre")),
     person("Robert A.", "Stine", email = "stine@wharton.upenn.edu", role = "aut")
