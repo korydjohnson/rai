@@ -80,7 +80,7 @@
 #' @export
 prepareData = function(theData, poly=TRUE, startDeg=1) {
   if (any(is.na(theData))) {
-    warning("Missing values deteted; applying default conversions and exclusions.
+    warning("Missing values detected; applying default conversions and exclusions.
             See documentation for details or remove missing values manually.")
     theData = modMissingData(as.data.frame(theData))
   }
@@ -104,7 +104,8 @@ modMissingCol = function(col) {
     col[missing] = mean(col, na.rm=TRUE)
     list(col, missing)
   } else {  # categorical
-    col[is.na(col)] = "NA"
+    # col[is.na(col)] = "NA"
+    col = addNA(col)
     list(col)
   }
 }
