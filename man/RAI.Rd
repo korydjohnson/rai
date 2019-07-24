@@ -18,7 +18,7 @@ rai(theData, theResponse, alpha = 0.1, alg = "rai", r = 0.8,
   save = TRUE, lmFit = .lm.fit)
 }
 \arguments{
-\item{theData}{matrix of covariates.}
+\item{theData}{matrix or data.frame of covariates.}
 
 \item{poly}{logical. Should the algorithm look for higher-order polynomials?}
 

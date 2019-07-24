@@ -85,17 +85,21 @@ prepareData = function(theData, poly=TRUE, startDeg=1) {
     theData = modMissingData(as.data.frame(theData))
   }
   if ("data.frame" %in% class(theData)) {
-    if (ncol(theData) > 1000) {
-      warning("Possible protection stack overflow;
+    numData = sapply(theData, function(col) is.numeric(col) || is.logical(col))
+    if (sum(!numData) > 0) {
+      if (sum(!numData) >1000) {
+        warning("Possible protection stack overflow;
               if so, pass theData as a matrix.")
+      }
+      theData_cat = model.matrix(~. - 1, data=theData[ ,!numData, drop=FALSE])
+      theData = cbind(theData[,numData, drop=FALSE], theData_cat)
     }
-    theData = model.matrix(~. - 1, data=as.data.frame(theData))
   }
   colnames(theData) = make.names(colnames(theData))
   if (poly && startDeg!=1) {
     theData = apply(theData, 2, function(col) col^startDeg)
   }
-  theData
+  as.matrix(theData)
 }
 
 modMissingCol = function(col) {
@@ -104,23 +108,21 @@ modMissingCol = function(col) {
     col[missing] = mean(col, na.rm=TRUE)
     list(col, missing)
   } else {  # categorical
-    # col[is.na(col)] = "NA"
-    col = addNA(col)
-    list(col)
+    list(addNA(col))
   }
 }
 
-modMissingData = function(dataList) {
-  out = lapply(dataList,
+modMissingData = function(theData) {
+  out = lapply(theData,
                function(el) if (any(is.na(el))) modMissingCol(el) else list(el))
   lengths = lapply(out, length)
-  dataMod = as.data.frame(out)
   dfNames = mapply(
     function(len, name) if (len==1) name else c(name, paste0(name, "_NA")),
-    lengths, names(dataList)
+    lengths, names(out)
   )
-  names(dataMod) = unlist(dfNames)
-  dataMod
+  theData = as.data.frame(out)
+  names(theData) = unlist(dfNames)
+  theData
 }
 
 #' @name RAI
@@ -159,7 +161,7 @@ rai = function(theData, theResponse, alpha=.1, alg="rai", r=.8, poly=alg!="RH",
   aucOut$time = Sys.time() - timeStart
   aucOut$options = list(alg=alg, searchType=searchType, poly=poly, r=r,
                         startDeg=startDeg, alpha=alpha, omega=omega, m=m)
-  aucOut$subData = theData[,sort(unique(unlist(aucOut$features)))]
+  aucOut$subData = theData[,sort(unique(unlist(aucOut$features))), drop=FALSE]
   aucOut$model = lm(aucOut$formula, data.frame(y=theResponse, aucOut$subData))
   class(aucOut) = "rai"
   aucOut
