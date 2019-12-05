@@ -254,7 +254,8 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
                                 theModelFeatures, MoreArgs = list(theData)))
     f = paste("y ~", paste(colnames(X), collapse="+"))
   }
-  out = list(formula=f, y=y,  X=X, features=theModelFeatures)
+  out = list(formula=f, y=y,  X=X, features=theModelFeatures,
+             remainingWealth = gWealth$state()$wealth)
   if (save) { out$summary = do.call(rbind, results) }
 
   out
