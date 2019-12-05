@@ -87,15 +87,23 @@ prepareData = function(theData, poly=TRUE, startDeg=1) {
   if ("data.frame" %in% class(theData)) {
     numData = sapply(theData, function(col) is.numeric(col) || is.logical(col))
     if (sum(!numData) > 0) {
-      if (sum(!numData) >1000) {
+      if (sum(!numData) > 1000) {
         warning("Possible protection stack overflow;
               if so, pass theData as a matrix.")
       }
-      theData_cat = model.matrix(~. - 1, data=theData[ ,!numData, drop=FALSE])
-      theData = cbind(theData[,numData, drop=FALSE], theData_cat)
+      nCategories = sapply(theData[, !numData, drop=FALSE],
+                           function(col) length(unique(col)))
+      theData_cat_2 = do.call(cbind,
+                            lapply(theData[, !numData & nCategories==2, drop=FALSE],
+                                   function(col) as.integer(col == col[1])))
+      theData_cat_n =do.call(cbind,
+                             lapply(theData[, !numData & nCategories>2, drop=FALSE],
+                                    function(col) model.matrix(~.-1, data=data.frame(col))))
+      # theData_cat = model.matrix(~. - 1, data=theData[ ,!numData, drop=FALSE])
+      theData = cbind(theData[,numData, drop=FALSE], theData_cat_2, theData_cat_n)
     }
   }
-  colnames(theData) = make.names(colnames(theData))
+  colnames(theData) = make.names(colnames(theData), unique=TRUE)
   if (poly && startDeg!=1) {
     theData = apply(theData, 2, function(col) col^startDeg)
   }
