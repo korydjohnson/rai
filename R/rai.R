@@ -87,19 +87,24 @@ prepareData = function(theData, poly=TRUE, startDeg=1) {
   if ("data.frame" %in% class(theData)) {
     numData = sapply(theData, function(col) is.numeric(col) || is.logical(col))
     if (sum(!numData) > 0) {
-      if (sum(!numData) > 1000) {
-        warning("Possible protection stack overflow;
+      if (sum(!numData) > 500) {
+        warning("Possible protection stack overflow due to many categorical features;
               if so, pass theData as a matrix.")
       }
       nCategories = sapply(theData[, !numData, drop=FALSE],
                            function(col) length(unique(col)))
       theData_cat_2 = do.call(cbind,
-                            lapply(theData[, !numData & nCategories==2, drop=FALSE],
-                                   function(col) as.integer(col == col[1])))
-      theData_cat_n =do.call(cbind,
-                             lapply(theData[, !numData & nCategories>2, drop=FALSE],
-                                    function(col) model.matrix(~.-1, data=data.frame(col))))
-      # theData_cat = model.matrix(~. - 1, data=theData[ ,!numData, drop=FALSE])
+                              lapply(theData[, !numData & nCategories==2, drop=FALSE],
+                                     function(col) as.integer(col == col[1])))
+      cat_n_names = colnames(theData)[!numData & nCategories>2]
+      theData_cat_n = do.call(cbind,
+                              mapply(
+                                function(col, name) {
+                                  model.matrix(~.-1, data=structure(data.frame(col), names=name))
+                                },
+                                theData[, !numData & nCategories>2, drop=FALSE],
+                                cat_n_names,
+                                SIMPLIFY=FALSE))
       theData = cbind(theData[,numData, drop=FALSE], theData_cat_2, theData_cat_n)
     }
   }
