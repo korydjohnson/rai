@@ -45,3 +45,12 @@ test_that("categorical data converted; pass & epoch", {
   rai_out = rai(theData, theResponse)
   rai_out = rai(theData, theResponse, alg="raiPlus", verbose=T)
 })
+
+test_that("1 column output for binary categories, n col for n > 2 categories", {
+  theData = data.frame("binary1" = as.character(c(1,2,1)),
+                       "binary2" = as.character(c(2,1,1)),
+                       "multi" = as.character(1:3))
+  prepData = prepareData(theData)
+  expect_identical(length(unique(colnames(prepData))), ncol(prepData))
+  expect_identical(ncol(prepData), 5L)
+})
