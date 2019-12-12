@@ -54,4 +54,8 @@ test_that("1 column output for binary categories, n col for n > 2 categories", {
   prepData = prepareData(theData)
   expect_identical(length(unique(colnames(prepData))), ncol(prepData))
   expect_identical(ncol(prepData), 8L)
+  prepData = prepareData(theData[,c(1,2)])
+  expect_identical(ncol(prepData), 2L)
+  prepData = prepareData(theData[,c(3,4)])
+  expect_identical(ncol(prepData), 6L)
 })

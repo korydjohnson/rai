@@ -92,20 +92,26 @@ prepareData = function(theData, poly=TRUE, startDeg=1) {
               if so, pass theData as a matrix.")
       }
       theData_cat = theData[, !numData, drop=FALSE]
+      theData = theData[,numData, drop=FALSE]
       nValues = sapply(theData_cat, function(col) length(unique(col)))
-      theData_cat_2 = do.call(cbind,
-                              lapply(theData_cat[, nValues==2, drop=FALSE],
-                                     function(col) as.integer(col == col[1])))
-      cat_n_names = colnames(theData_cat)[nCategories>2]
-      theData_cat_n = do.call(cbind,
-                              mapply(
-                                function(col, name) {
-                                  model.matrix(~.-1, data=structure(data.frame(col), names=name))
-                                },
-                                theData_cat[, nValues>2, drop=FALSE],
-                                cat_n_names,
-                                SIMPLIFY=FALSE))
-      theData = cbind(theData[,numData, drop=FALSE], theData_cat_2, theData_cat_n)
+      if (any(nValues==2)) {
+        theData_cat_2 = do.call(cbind,
+                                lapply(theData_cat[, nValues==2, drop=FALSE],
+                                       function(col) as.integer(col == col[1])))
+        theData = cbind(theData, theData_cat_2)
+      }
+      if (any(nValues>2)) {
+        cat_n_names = colnames(theData_cat)[nValues>2]
+        theData_cat_n = do.call(cbind,
+                                mapply(
+                                  function(col, name) {
+                                    model.matrix(~.-1, data=structure(data.frame(col), names=name))
+                                  },
+                                  theData_cat[, nValues>2, drop=FALSE],
+                                  cat_n_names,
+                                  SIMPLIFY=FALSE))
+        theData = cbind(theData, theData_cat_n)
+      }
     }
   }
   colnames(theData) = make.names(colnames(theData), unique=TRUE)
