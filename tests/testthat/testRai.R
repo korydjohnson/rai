@@ -59,3 +59,19 @@ test_that("1 column output for binary categories, n col for n > 2 categories", {
   prepData = prepareData(theData[,c(3,4)])
   expect_identical(ncol(prepData), 6L)
 })
+
+test_that("baseModel works", {
+  data("mtcars")
+  theResponse = mtcars$mpg
+  theData = mtcars[ ,-1]
+  colnames(theData)
+  baseModel = list("cyl", "hp")
+  baseIndexes = match(baseModel, colnames(theData))
+  rai_out = rai(theData, theResponse, baseModel=baseModel)
+  expect_equal(unlist(rai_out$features[1:length(baseModel)]),
+               baseIndexes)
+  baseModel = list(c("cyl","hp"))
+  rai_out = rai(theData, theResponse, baseModel=baseModel)
+  expect_true(str_detect(rai_out$formula, "cyl\\*hp"))
+  rai_out = rai(theData, theResponse, baseModel=baseModel)
+})
