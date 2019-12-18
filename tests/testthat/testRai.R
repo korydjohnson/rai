@@ -25,18 +25,19 @@ test_that("prepareData for data.frame", {
   theData = head(CO2)
   theData_mm = prepareData(theData)
   theData_mm2 = model.matrix(~.-1, data=theData)
-  theData_mm2 = cbind(theData_mm2[,c(15,16)], theData_mm2[,-c(15,16)])
+  redundantCols = apply(theData_mm2, 2, function(col) length(unique(col)))
+  theData_mm2 = theData_mm2[, redundantCols>1]
   expect_identical(theData_mm, theData_mm2)
 })
 
 test_that("modMissing works", {
-  theData = head(CO2)
+  theData = CO2
   theData[1,1] = NA
   theData[1,5] = NA
   theData_mm = prepareData(theData)
   expect_equal(ncol(theData_mm), 18)
   expect_equal(theData_mm[1,"uptake"], mean(theData[-1,"uptake"]))
-  expect_equal(sum(abs(theData_mm[,"PlantNA"])-c(1,rep(0,5))), 0)
+  expect_equal(unname(theData_mm[,"PlantNA"]), c(1, rep(0, 83)))
 })
 
 test_that("categorical data converted; pass & epoch", {
@@ -72,6 +73,6 @@ test_that("baseModel works", {
                baseIndexes)
   baseModel = list(c("cyl","hp"))
   rai_out = rai(theData, theResponse, baseModel=baseModel)
-  expect_true(str_detect(rai_out$formula, "cyl\\*hp"))
+  expect_true(grepl("cyl\\*hp", rai_out$formula))
   rai_out = rai(theData, theResponse, baseModel=baseModel)
 })
