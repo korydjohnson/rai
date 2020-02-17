@@ -8,8 +8,24 @@
 \usage{
 vif(res, y, X, x, n, p, m, TSS, lmFit)
 
-runAuction(experts, gWealth, theData, y, alg, poly, searchType, m, sigma,
-  omega, reuse, nMaxTest, verbose, save, lmFit)
+runAuction(
+  experts,
+  gWealth,
+  theData,
+  y,
+  alg,
+  poly,
+  searchType,
+  m,
+  sigma,
+  omega,
+  reuse,
+  nMaxTest,
+  verbose,
+  save,
+  lmFit,
+  baseModel
+)
 }
 \arguments{
 \item{res}{residuals from current model.}
@@ -64,6 +80,14 @@ for RAI or RAIplus (effect is negligible).}
 
 \item{save}{logical. Should the auction results be saved? If TRUE, returns a
 summary matrix.}
+
+\item{baseModel}{Features to include as the initial model. When NULL, the base
+model only includes the intercept. baseModel must be specified as a list of
+desired features. Each list element is a vector of column names or indices,
+where vectors of length > 1 specify an interaction term of those
+features. Please check the transformed data using \code{\link{prepareData}}
+in order to determine the correct column names and indexes of your desired
+model.}
 }
 \value{
 A list which includes the following components: \item{formula}{final

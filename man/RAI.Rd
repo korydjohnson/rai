@@ -11,11 +11,27 @@ prepareData(theData, poly = TRUE, startDeg = 1)
 
 is.rai(x)
 
-rai(theData, theResponse, alpha = 0.1, alg = "rai", r = 0.8,
-  poly = alg != "RH", startDeg = 1, searchType = "breadth",
-  m = 500, sigma = "step", rmse = NA, df = NA, omega = alpha,
-  reuse = (alg == "RH"), maxTest = Inf, verbose = FALSE,
-  save = TRUE, lmFit = .lm.fit)
+rai(
+  theData,
+  theResponse,
+  alpha = 0.1,
+  alg = "rai",
+  r = 0.8,
+  poly = alg != "RH",
+  startDeg = 1,
+  searchType = "breadth",
+  m = 500,
+  sigma = "step",
+  rmse = NA,
+  df = NA,
+  omega = alpha,
+  reuse = (alg == "RH"),
+  maxTest = Inf,
+  verbose = FALSE,
+  save = TRUE,
+  lmFit = .lm.fit,
+  baseModel = NULL
+)
 }
 \arguments{
 \item{theData}{matrix or data.frame of covariates.}
@@ -73,6 +89,14 @@ summary matrix.}
 fits. The default is .lm.fit, but other alternatives are possible. Note
 that it does not use formula notation as this is costly. Another
 recommended option is fastLmPure from RcppEigen or related packages.}
+
+\item{baseModel}{Features to include as the initial model. When NULL, the base
+model only includes the intercept. baseModel must be specified as a list of
+desired features. Each list element is a vector of column names or indices,
+where vectors of length > 1 specified an interaction term of those
+features. Please check the transformed data using \code{\link{prepareData}}
+in order to determine the correct column names and indexes of your desired
+model.}
 }
 \value{
 A list which includes the following components: \item{y}{response.}

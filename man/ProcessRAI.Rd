@@ -12,8 +12,7 @@ plot_ntest_rS(rawSum)
 
 plot_ntest_wealth(rawSum)
 
-\method{predict}{rai}(object, newdata = NULL, alpha = NULL,
-  omega = NULL, ...)
+\method{predict}{rai}(object, newdata = NULL, alpha = NULL, omega = NULL, ...)
 
 \method{summary}{rai}(object, ...)
 }
