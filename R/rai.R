@@ -59,6 +59,13 @@
 #'   fits. The default is .lm.fit, but other alternatives are possible. Note
 #'   that it does not use formula notation as this is costly. Another
 #'   recommended option is fastLmPure from RcppEigen or related packages.
+#' @param baseModel Features to include as the initial model. When NULL, the base
+#'   model only includes the intercept. baseModel must be specified as a list of
+#'   desired features. Each list element is a vector of column names or indices,
+#'   where vectors of length > 1 specified an interaction term of those
+#'   features. Please check the transformed data using \code{\link{prepareData}}
+#'   in order to determine the correct column names and indexes of your desired
+#'   model.
 #' @param x an R object.
 #' @return A list which includes the following components: \item{y}{response.}
 #'   \item{X}{model matrix from final model.} \item{formula}{final model
@@ -87,15 +94,34 @@ prepareData = function(theData, poly=TRUE, startDeg=1) {
   if ("data.frame" %in% class(theData)) {
     numData = sapply(theData, function(col) is.numeric(col) || is.logical(col))
     if (sum(!numData) > 0) {
-      if (sum(!numData) >1000) {
-        warning("Possible protection stack overflow;
+      if (sum(!numData) > 500) {
+        warning("Possible protection stack overflow due to many categorical features;
               if so, pass theData as a matrix.")
       }
-      theData_cat = model.matrix(~. - 1, data=theData[ ,!numData, drop=FALSE])
-      theData = cbind(theData[,numData, drop=FALSE], theData_cat)
+      theData_cat = theData[, !numData, drop=FALSE]
+      theData = theData[,numData, drop=FALSE]
+      nValues = sapply(theData_cat, function(col) length(unique(col)))
+      if (any(nValues==2)) {
+        theData_cat_2 = do.call(cbind,
+                                lapply(theData_cat[, nValues==2, drop=FALSE],
+                                       function(col) as.integer(col == col[1])))
+        theData = cbind(theData, theData_cat_2)
+      }
+      if (any(nValues>2)) {
+        cat_n_names = colnames(theData_cat)[nValues>2]
+        theData_cat_n = do.call(cbind,
+                                mapply(
+                                  function(col, name) {
+                                    model.matrix(~.-1, data=structure(data.frame(col), names=name))
+                                  },
+                                  theData_cat[, nValues>2, drop=FALSE],
+                                  cat_n_names,
+                                  SIMPLIFY=FALSE))
+        theData = cbind(theData, theData_cat_n)
+      }
     }
   }
-  colnames(theData) = make.names(colnames(theData))
+  colnames(theData) = make.names(colnames(theData), unique=TRUE)
   if (poly && startDeg!=1) {
     theData = apply(theData, 2, function(col) col^startDeg)
   }
@@ -134,11 +160,12 @@ is.rai = function(x) inherits(x, "rai")
 rai = function(theData, theResponse, alpha=.1, alg="rai", r=.8, poly=alg!="RH",
                startDeg=1, searchType="breadth", m=500, sigma="step", rmse = NA,
                df=NA, omega=alpha, reuse=(alg=="RH"), maxTest=Inf, verbose=FALSE,
-               save=TRUE, lmFit = .lm.fit) {
+               save=TRUE, lmFit = .lm.fit, baseModel=NULL) {
   stopifnot(searchType %in% c("breadth", "depth") ||
               sigma %in% c("ind", "step") ||
               alg %in% c("rai", "raiPlus", "RH") ||
-              any(c("matrix","data.frame") %in% class(theData)))
+              any(c("matrix","data.frame") %in% class(theData)) ||
+              (is.null(baseModel) || is.list(baseModel)))
   if (poly && alg == "RH") { stop("Cannot do polynomial regression with RH.") }
   if (reuse && alg != "RH") { stop("RAI does not reuse wealth.") }
 
@@ -157,7 +184,7 @@ rai = function(theData, theResponse, alpha=.1, alg="rai", r=.8, poly=alg!="RH",
   timeStart = Sys.time()
   aucOut = runAuction(experts, gWealth, theData, theResponse,
                       alg, poly, searchType, m, sigma, omega, reuse, maxTest,
-                      verbose, save, lmFit)
+                      verbose, save, lmFit, baseModel)
   aucOut$time = Sys.time() - timeStart
   aucOut$options = list(alg=alg, searchType=searchType, poly=poly, r=r,
                         startDeg=startDeg, alpha=alpha, omega=omega, m=m)

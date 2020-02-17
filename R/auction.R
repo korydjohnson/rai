@@ -43,6 +43,13 @@
 #'   The default is .lm.fit, but other alternatives are possible. Note that it
 #'   does not use formula notation as this is costly. Another recommended option is
 #'   fastLmPure from RcppEigen or related packages.
+#' @param baseModel Features to include as the initial model. When NULL, the base
+#'   model only includes the intercept. baseModel must be specified as a list of
+#'   desired features. Each list element is a vector of column names or indices,
+#'   where vectors of length > 1 specify an interaction term of those
+#'   features. Please check the transformed data using \code{\link{prepareData}}
+#'   in order to determine the correct column names and indexes of your desired
+#'   model.
 #' @return A list which includes the following components: \item{formula}{final
 #'   model formula.} \item{y}{response.} \item{X}{model matrix from final
 #'   model.} \item{features}{list of interactions included in formula.}
@@ -73,8 +80,8 @@ vif = function(res, y, X, x, n, p, m, TSS, lmFit) {
   list(rho = rho, rS = rS)
 }
 
-featureName = function(indices, theData) {
-  paste0("I(", paste(sort(colnames(theData)[indices]), collapse="*"), ")")
+featureName = function(indices, colNames) {
+  paste0("I(", paste(sort(colNames[indices]), collapse="*"), ")")
 }
 
 rowProd = function(mat) {
@@ -89,19 +96,50 @@ rowProd = function(mat) {
 
 #' @name Auction
 runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
-                      sigma, omega, reuse, nMaxTest, verbose, save, lmFit) {
+                      sigma, omega, reuse, nMaxTest, verbose, save, lmFit, baseModel) {
   # placeholders for results ------------------------
   n = nrow(y)
   p = 0
-  theModelFeatures = list()
-  X = matrix(1, nrow=n); # selected data columns
   res = y - mean(y)
   TSS = c(crossprod(res))
+  X = matrix(1, nrow=n); # selected data columns
+  theModelFeatures = list()
+  rS = 0  # initial R^2; will keep track of incremental change
+
+  # features, X, expert list, rS, and sd for baseModel -----------
+  if (!is.null(baseModel)) {
+    p = length(baseModel)
+    x = vector(mode = "list", length = p+1)
+    x[[1]] = X
+    for (i  in 1:p) {  # create features and experts
+      if (class(baseModel[[i]]) == "character") {
+        theModelFeatures[[i]] = match(baseModel[[i]], colnames(theData))
+      } else {
+        theModelFeatures[[i]] = baseModel[[i]]
+      }
+      x[[i+1]] = rowProd(theData[ , theModelFeatures[[i]], drop=FALSE])  # feature
+      if (poly) {  # new expert for interactions with rejected feature
+        newExp = makeScavengerExpert(gWealth, theModelFeatures,
+                                     paste(sort(theModelFeatures[[i]]), collapse="_"))
+        if (searchType == "breadth") {
+          experts = list(list(newExp), experts)
+        } else {  # depth
+          experts = list(experts, list(newExp))
+        }
+        experts = unlist(experts, recursive=FALSE)
+      }
+    }
+    X = do.call(cbind, x)
+    res = as.matrix(lmFit(X, y)$residuals)
+    cpRes = c(crossprod(res))
+    if (sigma != "ind") {gWealth$ud_resid(cpRes, sqrt(cpRes/(n-p-1)), n-p-1)}
+    rS = 1 - cpRes/TSS
+  }
   if (save) { results = list() }
   if (alg == "raiPlus") { nFinishedPass = nFinishedEp = 0 }
+
   # start auction ---------------------------
   ntest = 1
-  rS = 0  # initial R^2; will keep track of incremental change
   epochsReady = sapply(experts, function(e) e$state()$epoch)
   while (ntest <= nMaxTest) {
     # max: select from end of experts; depth/breath builds list differently
@@ -251,11 +289,12 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
     f = "y ~ 1"
   } else {
     colnames(X) = c("1", mapply(featureName,
-                                theModelFeatures, MoreArgs = list(theData)))
+                                theModelFeatures, MoreArgs = list(colnames(theData))))
     f = paste("y ~", paste(colnames(X), collapse="+"))
   }
-  out = list(formula=f, y=y,  X=X, features=theModelFeatures)
-  if (save) { out$summary = do.call(rbind, results)}
+  out = list(formula=f, y=y,  X=X, features=theModelFeatures,
+             remainingWealth = gWealth$state()$wealth)
+  if (save) { out$summary = do.call(rbind, results) }
 
   out
 }

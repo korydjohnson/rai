@@ -130,8 +130,10 @@ summary.rai = function(object, ...) {
   stats$nFeatures = length(object$features)
   degree = sapply(object$features, length)
   nUniqueFeatures = sapply(object$features, function(vec) length(unique(vec)))
-  stats$poly = list(tableDegrees = as.data.frame(table(degree)),
-                    tableInteraction = as.data.frame(table(nUniqueFeatures)))
+  if (length(degree) > 0 && length(nUniqueFeatures) > 0) {
+    stats$poly = list(tableDegrees = as.data.frame(table(degree)),
+                      tableInteraction = as.data.frame(table(nUniqueFeatures)))
+  }
   stats$rS = max(rawSummary$rS)
   stats$nFeaturesTested = length(unique(object$summary[ ,"feature"]))
   stats$nHypothesisTests = rawSummary %>%
