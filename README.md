@@ -43,11 +43,6 @@ devtools::install_github("korydjohnson/rai")
 
 ``` r
 library(rai)
-#> Registered S3 methods overwritten by 'ggplot2':
-#>   method         from 
-#>   [.quosures     rlang
-#>   c.quosures     rlang
-#>   print.quosures rlang
 data("CO2")
 theResponse = CO2$uptake
 theData = CO2[ ,-5]
@@ -62,7 +57,7 @@ summary(rai_out$model)
 #> 
 #> Call:
 #> lm(formula = aucOut$formula, data = data.frame(y = theResponse, 
-#>     theData))
+#>     aucOut$subData))
 #> 
 #> Residuals:
 #>     Min      1Q  Median      3Q     Max 
@@ -115,30 +110,30 @@ summary(rai_out)
     #> 
     #> $experts
     #> # A tibble: 9 x 4
-    #>   expert             nRej nFeatures order
-    #>   <chr>             <int>     <int> <dbl>
-    #> 1 SMarginal             4        15     1
-    #> 2 SPoly 13              0         1     2
-    #> 3 SPoly 15              2         2     3
-    #> 4 SPoly 15_15           0         3     4
-    #> 5 SPoly 14              0         4     5
-    #> 6 SPoly 10              0         5     6
-    #> 7 SPoly 13_15           2         6     7
-    #> 8 SPoly 13_14_15        0         7     8
-    #> 9 SPoly 13_15_15_15     0         8     9
+    #>   expert          nRej nFeatures order
+    #>   <chr>          <int>     <int> <dbl>
+    #> 1 SMarginal          4        15     1
+    #> 2 SPoly 14           0         1     2
+    #> 3 SPoly 1            2         2     3
+    #> 4 SPoly 1_1          0         3     4
+    #> 5 SPoly 15           0         4     5
+    #> 6 SPoly 11           0         5     6
+    #> 7 SPoly 1_14         2         6     7
+    #> 8 SPoly 1_14_15      0         7     8
+    #> 9 SPoly 1_1_1_14     0         8     9
     #> 
     #> $tests
     #> # A tibble: 8 x 4
-    #>   timesTested count nExperts expert           
-    #>         <int> <int>    <int> <chr>            
-    #> 1          22     1        1 SPoly 13_14_15   
-    #> 2          12    15        3 SPoly 10         
-    #> 3          11    10        5 SPoly 13_15_15_15
-    #> 4          10     3        3 SPoly 13_15      
-    #> 5           7     1        1 SMarginal        
-    #> 6           6     2        2 SMarginal        
-    #> 7           5     1        1 SMarginal        
-    #> 8           1    16        7 SPoly 15_15      
+    #>   timesTested count nExperts expert        
+    #>         <int> <int>    <int> <chr>         
+    #> 1          22     1        1 SPoly 1_14_15 
+    #> 2          12    15        3 SPoly 11      
+    #> 3          11    10        5 SPoly 1_1_1_14
+    #> 4          10     3        3 SPoly 1_14    
+    #> 5           7     1        1 SMarginal     
+    #> 6           6     1        1 SPoly 1       
+    #> 7           5     2        1 SMarginal     
+    #> 8           1    16        7 SPoly 1_1     
     #> 
     #> $epochs
     #> # A tibble: 12 x 3
@@ -148,8 +143,8 @@ summary(rai_out)
     #>  2     2 0.64       0
     #>  3     3 0.512      0
     #>  4     4 0.410      0
-    #>  5     5 0.328      1
-    #>  6     6 0.262      2
+    #>  5     5 0.328      2
+    #>  6     6 0.262      1
     #>  7     7 0.210      1
     #>  8     8 0.168      0
     #>  9     9 0.134      0
@@ -162,7 +157,7 @@ summary(rai_out)
     #> [1] 0.01077552
     #> 
     #> $stats$nTests
-    #> [1] 382
+    #> [1] 381
     #> 
     #> $stats$nEpochs
     #> [1] 12
@@ -190,3 +185,15 @@ summary(rai_out)
     #> 
     #> $stats$nFeaturesTested
     #> [1] 49
+    #> 
+    #> $stats$nHypothesisTests
+    #> [1] 150
+
+Necessary functions are provided to use rai within a caret workflow:
+
+``` r
+# fitControl <- caret::trainControl(method = "repeatedcv",
+#                            number = 5, ## 5-fold CV...
+#                            repeats = 5)  ## repeated 5 times
+# caret::train(x=theData, y=theResponse, method=rai_caret, trControl = fitControl)
+```

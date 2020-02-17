@@ -65,3 +65,11 @@ of those tests by calling `summary` on the returned object:
 ```{r}
 summary(rai_out)
 ```
+
+Necessary functions are provided to use rai within a caret workflow:
+```{r}
+# fitControl <- caret::trainControl(method = "repeatedcv",
+#                            number = 5, ## 5-fold CV...
+#                            repeats = 5)  ## repeated 5 times
+# caret::train(x=theData, y=theResponse, method=rai_caret, trControl = fitControl)
+```

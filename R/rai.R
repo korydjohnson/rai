@@ -1,4 +1,4 @@
-# RAI: Outermost Function; Only Exported Function ------------------------------
+# RAI: Outermost Function ------------------------------
 
 #' @name RAI
 #' @title Main function for Revisiting Alpha-Investing (RAI) regression.
