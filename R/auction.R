@@ -105,6 +105,7 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
   X = matrix(1, nrow=n); # selected data columns
   theModelFeatures = list()
   rS = 0  # initial R^2; will keep track of incremental change
+  colNames = colnames(theData)
 
   # features, X, expert list, rS, and sd for baseModel -----------
   if (!is.null(baseModel)) {
@@ -113,7 +114,7 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
     x[[1]] = X
     for (i  in 1:p) {  # create features and experts
       if (class(baseModel[[i]]) == "character") {
-        theModelFeatures[[i]] = match(baseModel[[i]], colnames(theData))
+        theModelFeatures[[i]] = match(baseModel[[i]], colNames)
       } else {
         theModelFeatures[[i]] = baseModel[[i]]
       }
@@ -187,7 +188,7 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
     } else {  # reject
       if (verbose) {
         cat("  rChange", rChange, ">", "rCrit", state$rCrit,
-            "rCrit\n++Add", featureName(xIndex, theData),"++\n")
+            "rCrit\n++Add", featureName(xIndex, colNames),"++\n")
       }
       iExpert$rejTest(omega)  # add to wealth, don't test covariate again
       if (!all(is.na(iExpert$get_vif()))) {  # don't have x when used stored info
@@ -228,7 +229,7 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
         ntest   = ntest,
         wealth  = state$wealth,
         expert  = iExpert$name,
-        feature = featureName(xIndex, theData),
+        feature = featureName(xIndex, colNames),
         bid     = state$bid,
         epoch   = state$epoch,
         rCrit   = state$rCrit,
@@ -289,7 +290,7 @@ runAuction = function(experts, gWealth, theData, y, alg, poly, searchType, m,
     f = "y ~ 1"
   } else {
     colnames(X) = c("1", mapply(featureName,
-                                theModelFeatures, MoreArgs = list(colnames(theData))))
+                                theModelFeatures, MoreArgs = list(colNames)))
     f = paste("y ~", paste(colnames(X), collapse="+"))
   }
   out = list(formula=f, y=y,  X=X, features=theModelFeatures,
